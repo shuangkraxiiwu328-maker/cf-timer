@@ -1606,7 +1606,7 @@ body::after {
         <span class="card-title">AMRAP</span>
         <span class="card-desc">As many rounds as possible</span>
       </div>
-      <span class="card-tag">Count<br>Down</span>
+      <span class="card-tag">Count<br>Up</span>
     </div>
   </button>
 
@@ -2354,10 +2354,10 @@ function startTimer() {
     document.getElementById('running').classList.add('giant-mode');
     document.getElementById('giant-clock').dataset.mode = 'amrap';
     document.getElementById('giant-clock').classList.remove('warn', 'blink');
-    document.getElementById('giant-time').textContent = formatTime(remaining);
+    document.getElementById('giant-time').textContent = formatTime(0);
     document.getElementById('giant-splits').innerHTML = '';
     display.className   = 'timer-display yellow';
-    display.textContent = formatTime(remaining);
+    display.textContent = formatTime(0);
     modeTag.textContent = 'AMRAP';
     setCtr.classList.add('hidden');
     setPWrap.classList.add('hidden');
@@ -2423,11 +2423,11 @@ function tick() {
 
   /* ── AMRAP ── */
   if (mode === 'amrap') {
-    remaining--;
     const d  = document.getElementById('timer-display');
     const gc = document.getElementById('giant-clock');
-    d.textContent = formatTime(remaining);
-    document.getElementById('giant-time').textContent = formatTime(remaining);
+    d.textContent = formatTime(elapsed);
+    document.getElementById('giant-time').textContent = formatTime(elapsed);
+    const remaining = targetSecs - elapsed;
     if (remaining <= 10 && remaining > 0) {
       d.className = 'timer-display red';
       gc.classList.add('warn');
@@ -2601,10 +2601,9 @@ function resetTimer() {
     document.getElementById('giant-clock').classList.remove('warn','blink');
     document.getElementById('giant-splits').innerHTML = '';
   } else if (mode === 'amrap') {
-    remaining = targetSecs;
     document.getElementById('timer-display').className   = 'timer-display yellow';
-    document.getElementById('timer-display').textContent = formatTime(remaining);
-    document.getElementById('giant-time').textContent    = formatTime(remaining);
+    document.getElementById('timer-display').textContent = '00:00';
+    document.getElementById('giant-time').textContent    = '00:00';
     document.getElementById('giant-clock').classList.remove('warn','blink');
     document.getElementById('giant-splits').innerHTML = '';
   } else {
