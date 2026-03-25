@@ -2135,8 +2135,34 @@ async function resumeAudio() {
   }
 }
 
+// iOS-reliable synchronous audio unlock.
+// Must be called directly inside a user-gesture handler (onclick, etc.).
+// Does NOT use async/await so the iOS gesture whitelist is never broken.
+// Pattern: resume() call + silent 1-sample buffer in the same sync frame.
+function unlockAudioSync() {
+  ensureAudioCtx();
+  if (!audioCtx) return;
+  // Call resume() synchronously — iOS registers the intent immediately
+  // even before the returned Promise resolves.
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  // Play a silent 1-sample buffer immediately in the gesture window.
+  // This is what actually activates iOS audio hardware — resume() alone
+  // is not sufficient on many iOS versions.
+  try {
+    const buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start(0);
+    const hint = document.getElementById('audio-hint');
+    if (hint) hint.style.display = 'none';
+  } catch(e) { /* non-fatal */ }
+}
+
 // Legacy entry point for countdown screen tap
-function initAudio() { resumeAudio(); }
+function initAudio() { unlockAudioSync(); }
 
 // ── Core layered tone generator ────────────────────────────────────
 // BUG FIX: if context is 'suspended', attempt an inline resume()
@@ -2277,20 +2303,15 @@ function longBeep() {
 // ══════════════════════════════════════════════
 let cdVal = 10, cdInterval = null;
 
-async function startCountdown() {
+function startCountdown() {
   if (mode === 'emom' && emomSetSecs < 5)  { alert('每组时长至少 5 秒！');  return; }
   if (mode === 'amrap' && targetSecs === 0) { alert('请设置时间！'); return; }
 
-  // ── AUDIO UNLOCK (must happen synchronously in this user-gesture) ──
-  // Step 1: create the AudioContext NOW, synchronously, while the
-  // browser's gesture window is still open. This is what actually
-  // unlocks iOS Safari — NOT the await below.
-  ensureAudioCtx();
-
-  // Step 2: fire-and-forget the async resume. We do NOT await it.
-  // The timer countdown starts immediately regardless of whether
-  // audio unlocks. Audio failure must NEVER stall the timer.
-  resumeAudio().catch(e => console.warn('[CF-AUDIO] resume error (non-fatal):', e));
+  // ── AUDIO UNLOCK — fully synchronous, no async/await ──────────────
+  // unlockAudioSync() creates the AudioContext, calls resume(), AND plays
+  // a silent buffer all in the same synchronous call frame. This is the
+  // only pattern that reliably activates iOS audio hardware.
+  unlockAudioSync();
   // ────────────────────────────────────────────────────────────────
 
   showRotateHint();
