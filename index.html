@@ -2116,6 +2116,17 @@ async function resumeAudio() {
     }
   }
   if (audioCtx.state === 'running') {
+    // iOS fix: play a silent 1-sample buffer to truly activate the audio
+    // session. Without this, iOS may report 'running' but still refuse to
+    // play audio until real sound has been scheduled at least once.
+    try {
+      const silentBuf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+      const silentSrc = audioCtx.createBufferSource();
+      silentSrc.buffer = silentBuf;
+      silentSrc.connect(audioCtx.destination);
+      silentSrc.start(0);
+    } catch(e) { /* non-fatal */ }
+
     const hint = document.getElementById('audio-hint');
     if (hint) hint.style.display = 'none';
     console.info('[CF-AUDIO] ✅ Audio is RUNNING — beeps will be heard.');
