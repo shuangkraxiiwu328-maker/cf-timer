@@ -2135,30 +2135,40 @@ async function resumeAudio() {
   }
 }
 
-// iOS-reliable synchronous audio unlock.
-// Must be called directly inside a user-gesture handler (onclick, etc.).
-// Does NOT use async/await so the iOS gesture whitelist is never broken.
-// Pattern: resume() call + silent 1-sample buffer in the same sync frame.
+// iOS-reliable audio unlock — call directly inside a user-gesture handler.
+//
+// WHY .then() and not synchronous: on iOS Safari, audioCtx.resume() is
+// truly async — the context state stays 'suspended' until the Promise
+// resolves. Any audio scheduled while still 'suspended' is silently
+// dropped by iOS. We must wait for the Promise before scheduling audio.
+// .then() microtasks are still within the iOS gesture whitelist on iOS 13+.
 function unlockAudioSync() {
   ensureAudioCtx();
   if (!audioCtx) return;
-  // Call resume() synchronously — iOS registers the intent immediately
-  // even before the returned Promise resolves.
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-  // Play a silent 1-sample buffer immediately in the gesture window.
-  // This is what actually activates iOS audio hardware — resume() alone
-  // is not sufficient on many iOS versions.
-  try {
-    const buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
-    const src = audioCtx.createBufferSource();
-    src.buffer = buf;
-    src.connect(audioCtx.destination);
-    src.start(0);
+
+  const _primer = () => {
+    // Warm up the full compressor→masterGain→destination chain using the
+    // same OscillatorNode type that real beeps use. Near-silent (0.00001).
+    try {
+      const g = audioCtx.createGain();
+      g.gain.value = 0.00001;
+      g.connect(compressor || audioCtx.destination);
+      const o = audioCtx.createOscillator();
+      o.connect(g);
+      o.start(audioCtx.currentTime);
+      o.stop(audioCtx.currentTime + 0.001);
+    } catch(e) {}
     const hint = document.getElementById('audio-hint');
     if (hint) hint.style.display = 'none';
-  } catch(e) { /* non-fatal */ }
+  };
+
+  if (audioCtx.state === 'running') {
+    _primer();
+  } else {
+    // resume() then primer in the .then() microtask —
+    // context is guaranteed 'running' before we schedule any audio.
+    audioCtx.resume().then(_primer).catch(() => {});
+  }
 }
 
 // Legacy entry point for countdown screen tap
@@ -2174,14 +2184,15 @@ function tone(freq, dur, vol = 1.0, delayMs = 0, label = 'beep') {
     return;
   }
 
-  // If suspended (race condition or page re-focus), try to resume inline
+  // If suspended at beep-time, try inline resume.
+  // NOTE: on iOS this will fail when called from setInterval (non-gesture).
+  // The only real fix is ensuring unlockAudioSync() succeeded at Start time.
+  // We still attempt it here as a best-effort for other platforms.
   if (audioCtx.state === 'suspended') {
     audioCtx.resume().then(() => {
-      console.info(`[CF-AUDIO] ↩ Inline resume succeeded for ${label}`);
-      _playTone(freq, dur, vol, delayMs, label);
-    }).catch(e => {
-      console.warn(`[CF-AUDIO] ⚠ ${label}: inline resume failed — silent.`, e);
-    });
+      // Add a small delay so currentTime advances past 0 before scheduling
+      setTimeout(() => _playTone(freq, dur, vol, delayMs, label), 50);
+    }).catch(() => {});
     return;
   }
 
