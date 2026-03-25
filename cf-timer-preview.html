@@ -1,0 +1,3232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>CF TIMER</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* ================================================================
+   APEX STEALTH — Design System
+   Inspired by Whoop, Rogue, Tesla: Industrial Functionalism
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.cdnfonts.com/css/dseg7-classic');
+
+/* ── Design Tokens ─────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg:          #050505;
+  --surface-1:   #0d0d0d;
+  --surface-2:   #141414;
+  --border:      #1e1e1e;
+  --border-hi:   #2a2a2a;
+
+  /* Typography */
+  --text-1:      #ffffff;
+  --text-2:      #888888;
+  --text-3:      #404040;
+
+  /* Accents */
+  --green:       #00FF00;
+  --green-dim:   #00cc00;
+  --green-glow:  rgba(0,255,0,.18);
+  --yellow:      #FFFF00;
+  --yellow-dim:  #cccc00;
+  --yellow-glow: rgba(255,255,0,.15);
+  --red:         #FF2020;
+  --red-glow:    rgba(255,32,32,.18);
+  --cyan:        #00E5FF;
+  --cyan-glow:   rgba(0,229,255,.15);
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:   cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast:  0.15s;
+  --t-mid:   0.35s;
+  --t-slow:  0.5s;
+
+  /* Radius */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+}
+
+/* ── Reset ─────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%; width: 100%;
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: 'Inter', 'Share Tech Mono', sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Screen Layer System ───────────────────────────────────────── */
+.screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: opacity .3s var(--ease-spring),
+              transform .3s var(--ease-spring);
+}
+.screen.hidden {
+  opacity: 0; pointer-events: none;
+  transform: translateY(14px) scale(0.98);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   HOME SCREEN — "Monolithic Stealth" redesign
+   Philosophy: three identically-branded capsule monoliths.
+   Differentiation lives only in: left accent strip color +
+   the unified neon-yellow tag text on the right.
+   Everything else (bg, border, shape, title color) is identical.
+   ──────────────────────────────────────────────────────────────── */
+#home {
+  gap: 0;
+  padding: max(env(safe-area-inset-top), 28px) 22px
+           max(env(safe-area-inset-bottom), 28px) 22px;
+  overflow-y: auto;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.logo {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(30px, 7.5vw, 52px);
+  letter-spacing: -.05em;
+  color: #ffffff;
+  text-align: center;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+/* The green dot is the only color in the logo — everything else is white */
+.logo-dot { color: #FFFF00; }
+
+.logo-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(8px, 1.8vw, 10px);
+  /* Exact spec: CROSSFIT · HYROX · FUNCTIONAL TRAINING */
+  letter-spacing: .38em;
+  color: #2e2e2e;
+  text-align: center;
+  text-transform: uppercase;
+  margin-bottom: 44px;
+  display: block;
+}
+
+/* ── Monolith capsule cards ──────────────────────────────────────
+   All three are IDENTICAL: same bg, same border, same radius,
+   same title color. Mode identity = left strip + yellow tag only. */
+.mode-card {
+  width: min(400px, 92vw);
+  background: #111111;
+  border: 1px solid #242424;
+  border-radius: 20px;
+  /* Left gets extra padding to compensate for the 3px accent strip */
+  padding: 22px 26px 22px 30px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  outline: none;
+  text-align: left;
+  display: block;              /* override button default */
+  /* Only animate geometry + shadow — bg and border never change */
+  transition: transform     0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow    0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Left accent strip ───────────────────────────────────────────
+   3px flush to left edge, full card height (overflow:hidden clips).
+   Mode colors are the ONLY non-monochromatic visual element.      */
+.mode-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 0;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+  opacity: 0.55;
+}
+.mode-card.ft::before { background: #00FF00; }   /* green  */
+.mode-card.am::before { background: #FFFF00; }   /* yellow */
+.mode-card.em::before { background: #00E5FF; }   /* cyan   */
+
+/* ── Hover / focus-visible ───────────────────────────────────────
+   Subtle scale + accent glow halo. Border color NEVER changes.   */
+.mode-card:hover,
+.mode-card:focus-visible { transform: scale(1.02) translateY(-2px); }
+
+.mode-card.ft:hover, .mode-card.ft:focus-visible {
+  box-shadow: 0 0 0 1px rgba(0,255,0,.12),
+              0 14px 44px rgba(0,255,0,.08),
+              0 4px 20px rgba(0,0,0,.7);
+}
+.mode-card.am:hover, .mode-card.am:focus-visible {
+  box-shadow: 0 0 0 1px rgba(255,255,0,.10),
+              0 14px 44px rgba(255,255,0,.06),
+              0 4px 20px rgba(0,0,0,.7);
+}
+.mode-card.em:hover, .mode-card.em:focus-visible {
+  box-shadow: 0 0 0 1px rgba(0,229,255,.10),
+              0 14px 44px rgba(0,229,255,.06),
+              0 4px 20px rgba(0,0,0,.7);
+}
+/* Strip widens slightly on hover */
+.mode-card:hover::before,
+.mode-card:focus-visible::before { width: 4px; opacity: 1; }
+
+/* Spring press-down */
+.mode-card:active {
+  transform: scale(0.975);
+  box-shadow: 0 2px 8px rgba(0,0,0,.8);
+}
+
+/* ── Interior layout ─────────────────────────────────────────────
+   Single flex row: [title+desc stack (left)] [tag (right)]
+   No nested boxes — everything flat inside the capsule.          */
+.card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+/* Left text stack */
+.card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;     /* allow text to truncate if needed */
+}
+
+/* Main mode title: pure white, maximum weight, tracking tight */
+.card-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(20px, 5.5vw, 32px);
+  letter-spacing: -.04em;
+  line-height: 1;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Sub-description: one line, muted grey, small caps mono */
+.card-desc {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(8px, 1.7vw, 10px);
+  letter-spacing: .16em;
+  color: #333333;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Right tag: UNIFIED NEON YELLOW across ALL three cards.
+   No box, no border, no background — pure floating text.
+   Ultra-small, wide-tracked, center-aligned vertically.          */
+.card-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(7px, 1.6vw, 9px);
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: #FFFF00;          /* identical yellow on ALL three cards */
+  opacity: 0.70;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+  line-height: 1.4;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   SETTINGS — Slide-up Drawer with Glass look
+   ──────────────────────────────────────────────────────────────── */
+#settings {
+  justify-content: flex-start;
+  padding-top: max(env(safe-area-inset-top), 0px);
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+/* Glass drawer panel */
+.settings-drawer {
+  width: min(440px, 96vw);
+  background: rgba(13,13,13,0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 24px 24px 36px;
+  margin-top: auto;
+}
+
+.back-btn {
+  position: absolute; top: 16px; left: 16px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 14px;
+  transition: background var(--t-fast), color var(--t-fast);
+  outline: none;
+  font-family: 'Share Tech Mono', monospace;
+}
+.back-btn:hover { background: var(--border-hi); color: var(--text-1); }
+
+.s-header {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(32px, 8vw, 56px);
+  letter-spacing: -.05em;
+  margin-top: 68px;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+.s-header.green  { color: var(--green);  }
+.s-header.yellow { color: var(--yellow); }
+.s-header.cyan   { color: var(--cyan);   }
+
+.s-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: .25em; color: var(--text-3);
+  text-transform: uppercase; margin-bottom: 32px;
+}
+
+/* Field labels */
+.field-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: .3em;
+  color: var(--text-3); margin-bottom: 10px;
+  text-transform: uppercase; text-align: center;
+}
+
+/* Spinner blocks */
+.spinner-box {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  width: min(320px, 85vw);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.spinner-box.cyan-box { border-color: rgba(0,229,255,.15); }
+
+.sp-col { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.sp-val {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(48px, 12vw, 80px);
+  letter-spacing: -.04em;
+  line-height: 1; color: var(--text-1);
+  width: 100%; text-align: center; padding: 12px 0;
+}
+.sp-btn {
+  width: 100%; padding: 10px 0;
+  background: none; border: none; cursor: pointer;
+  color: var(--border-hi); font-size: 16px;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.sp-btn:hover { color: var(--text-1); background: rgba(255,255,255,.04); }
+.sp-colon {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(48px, 12vw, 80px);
+  letter-spacing: -.04em;
+  color: var(--border); padding: 0 4px; margin-bottom: 4px;
+}
+
+.field-hint {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: .2em;
+  color: var(--text-3); margin-bottom: 28px;
+}
+
+/* Start button */
+.start-btn {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(18px, 4vw, 24px);
+  letter-spacing: -.01em;
+  width: min(320px, 85vw);
+  padding: 18px;
+  border: none; cursor: pointer;
+  border-radius: var(--r-md);
+  transition: box-shadow var(--t-mid), transform var(--t-fast);
+  outline: none;
+  margin-bottom: 32px;
+  text-transform: uppercase;
+}
+.start-btn.green  { background: var(--green);  color: #000; }
+.start-btn.yellow { background: var(--yellow); color: #000; }
+.start-btn.cyan   { background: var(--cyan);   color: #000; }
+.start-btn:hover  { transform: translateY(-2px); }
+.start-btn.green:hover  { box-shadow: 0 8px 32px var(--green-glow), 0 0 0 1px var(--green); }
+.start-btn.yellow:hover { box-shadow: 0 8px 32px var(--yellow-glow), 0 0 0 1px var(--yellow); }
+.start-btn.cyan:hover   { box-shadow: 0 8px 32px var(--cyan-glow), 0 0 0 1px var(--cyan); }
+.start-btn:active { transform: scale(0.97); box-shadow: none; }
+
+/* ────────────────────────────────────────────────────────────────
+   EMOM SETTINGS — "Stealth Industrial" Monolithic Panel
+   All new classes are prefixed em- so they never collide with
+   the existing For Time / AMRAP settings styles.
+   ──────────────────────────────────────────────────────────────── */
+
+/* The single dark rectangular panel that houses both rows */
+.em-panel {
+  width: min(360px, 88vw);
+  background: #111111;
+  border: 1px solid #222;
+  border-radius: 20px;
+  overflow: hidden;           /* clips the divider flush to panel edges */
+  margin-bottom: 28px;
+}
+
+/* Generic setting row inside the panel */
+.em-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+}
+
+/* Thin grey divider between rows — flush to panel width */
+.em-divider {
+  height: 1px;
+  background: #1e1e1e;
+  margin: 0;
+}
+
+/* Left: small muted label */
+.em-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(8px, 1.8vw, 10px);
+  letter-spacing: .32em;
+  color: #383838;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Centre: the large value display */
+.em-value {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Individual digit / digit-pair */
+.em-digit {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(38px, 10vw, 64px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -.02em;
+  color: #ffffff;
+  text-align: center;
+  min-width: 2.2ch;
+  cursor: default;
+  /* Swipe gestures wired in JS via attachSpinner */
+}
+
+/* Colon separator between MM and SS */
+.em-colon {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(28px, 7vw, 46px);
+  font-weight: 700;
+  line-height: 1;
+  color: #2e2e2e;
+  padding: 0 4px;
+  user-select: none;
+}
+
+/* Right: chevron buttons stacked vertically */
+.em-chevrons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.em-chev {
+  background: none; border: none; cursor: pointer; outline: none;
+  width: 32px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cyan);
+  opacity: 0.45;
+  border-radius: 6px;
+  transition: opacity 0.15s, background 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.em-chev:hover  { opacity: 1; background: rgba(0,229,255,.07); }
+.em-chev:active { opacity: 1; transform: scale(0.88); }
+
+.em-chev svg {
+  width: 14px; height: 14px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* Unit hint below chevron pair (MM / SS / SETS) */
+.em-unit {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 7px;
+  letter-spacing: .25em;
+  color: #2a2a2a;
+  text-transform: uppercase;
+  margin-top: 3px;
+  text-align: center;
+}
+
+/* ── TIME row: two digit-pairs with independent chevrons ─────────
+   Layout:  [LABEL]  [MM ▲▼]  [ : ]  [SS ▲▼]
+   Each digit-pair gets its own chevron column so MM and SS are
+   independently controllable.                                     */
+.em-time-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.em-digit-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.em-digit-col .em-chevrons { margin-bottom: 0; }
+
+/* ── EMOM-specific start button ──────────────────────────────────
+   Capsule shape (border-radius: 9999px), Neon Cyan fill.
+   Replaces the existing .start-btn.cyan for EMOM mode only.
+   The existing .start-btn.cyan class still applies for backward
+   compat — we just override the shape here.                       */
+.start-btn.cyan {
+  border-radius: 9999px;      /* full capsule override */
+}
+
+/* ── EMOM header accent line ─────────────────────────────────────
+   A 2px thin line under the EMOM title, Neon Cyan.
+   Shown only when #settings has data-mode="emom". */
+.s-accent-line {
+  height: 2px;
+  width: 40px;
+  background: var(--cyan);
+  border-radius: 1px;
+  margin-bottom: 28px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+/* JS adds .visible when mode = emom */
+.s-accent-line.visible { opacity: 1; }
+
+/* Landscape compact for EMOM panel */
+@media (orientation: landscape) {
+  .em-panel { margin-bottom: 12px; }
+  .em-row   { padding: 14px 18px; }
+  .em-digit { font-size: clamp(28px, 7vh, 48px); }
+  .em-colon { font-size: clamp(22px, 5vh, 36px); }
+  .em-chev  { width: 28px; height: 24px; }
+  .em-chev svg { width: 12px; height: 12px; }
+}
+#countdown { background: var(--bg); cursor: pointer; }
+
+.cd-num {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(160px, 40vw, 320px);
+  letter-spacing: -.06em;
+  line-height: .9;
+  color: var(--red);
+  text-shadow: 0 0 60px var(--red-glow), 0 0 120px rgba(255,32,32,.1);
+  animation: cdpulse 1s ease-in-out infinite;
+}
+@keyframes cdpulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+.cd-beat { animation: beat .1s ease-out forwards !important; }
+@keyframes beat { 0% { transform: scale(1.14); } 100% { transform: scale(1); } }
+
+.cd-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: .4em;
+  color: var(--text-3); margin-top: 24px;
+}
+.audio-hint {
+  position: absolute; bottom: 36px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: .18em;
+  color: var(--text-3);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   RUNNING SCREEN — Base layer
+   ──────────────────────────────────────────────────────────────── */
+#running { background: #000; flex-direction: column; gap: 0; }
+
+/* Flash overlays */
+#flash-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background: rgba(255,32,32,0);
+  transition: background .12s;
+}
+#flash-overlay.flash { background: rgba(255,32,32,0.14); }
+
+#split-flash {
+  position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background: rgba(255,255,255,0);
+  transition: background .07s;
+}
+#split-flash.flash { background: rgba(255,255,255,0.07); }
+
+/* Legacy running display (hidden when giant/emom modes active) */
+.run-mode-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: .32em; color: var(--text-3);
+  position: relative; z-index: 2; margin-bottom: 12px;
+}
+.timer-display {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(78px, 21vw, 195px);
+  letter-spacing: -.04em;
+  line-height: .95;
+  position: relative; z-index: 2;
+  transition: color .4s, text-shadow .4s;
+}
+.timer-display.green  { color: var(--green);  text-shadow: 0 0 40px var(--green-glow); }
+.timer-display.yellow { color: var(--yellow); text-shadow: 0 0 40px var(--yellow-glow); }
+.timer-display.cyan   { color: var(--cyan);   text-shadow: 0 0 40px var(--cyan-glow); }
+.timer-display.red    { color: var(--red);    text-shadow: 0 0 40px var(--red-glow); }
+.timer-display.paused { color: var(--text-3) !important; text-shadow: none !important; }
+
+/* Set counter / progress / dots (EMOM legacy) */
+.set-counter {
+  font-family: 'Inter', sans-serif; font-weight: 700;
+  font-size: clamp(16px, 4vw, 32px);
+  letter-spacing: -.02em; color: var(--text-3);
+  margin-bottom: 6px; position: relative; z-index: 2;
+  transition: color .3s, text-shadow .3s;
+}
+.set-counter.active { color: var(--cyan); text-shadow: 0 0 20px var(--cyan-glow); }
+
+.set-progress-wrap {
+  width: min(300px, 80vw); height: 2px;
+  background: var(--surface-2); margin-bottom: 20px;
+  position: relative; z-index: 2; border-radius: 2px;
+}
+#set-progress-bar {
+  height: 100%; background: var(--cyan);
+  transition: width .9s linear;
+  box-shadow: 0 0 8px var(--cyan-glow);
+  border-radius: 2px;
+}
+
+.set-dots {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  max-width: min(340px, 85vw); margin-top: 16px;
+  position: relative; z-index: 2;
+}
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--surface-2); border: 1px solid var(--border);
+  transition: background .3s, box-shadow .3s;
+}
+.dot.done { background: #0a2a1a; border-color: #1a4a2a; }
+.dot.cur  { background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+
+/* Split popup toast */
+#split-popup {
+  font-family: 'Inter', sans-serif; font-weight: 800;
+  font-size: clamp(18px, 4.5vw, 32px);
+  letter-spacing: -.02em;
+  color: var(--green);
+  text-shadow: 0 0 20px var(--green-glow);
+  position: relative; z-index: 3;
+  margin-top: 8px; opacity: 0;
+  transition: opacity .12s;
+  pointer-events: none; min-height: 1.2em;
+}
+#split-popup.show { opacity: 1; }
+
+/* ────────────────────────────────────────────────────────────────
+   GC-CONTROLS — Universal stealth icon bar
+   Appears over ALL running modes (giant + emom).
+   z-index 9999 puts it above every overlay.
+   Buttons: 20% opacity by default, 100% on hover/touch-active.
+   No backgrounds, no borders — pure glassmorphism ghost.
+   ──────────────────────────────────────────────────────────────── */
+#gc-controls {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 9999;
+  display: none;            /* shown only when running screen is visible */
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  padding-top: 16px;
+  /* Subtle upward gradient so buttons don't compete with the clock */
+  background: linear-gradient(to top,
+    rgba(0,0,0,.65) 0%,
+    rgba(0,0,0,.25) 60%,
+    transparent 100%);
+  pointer-events: none;     /* container transparent to touches */
+}
+
+/* Show when #running is visible (not hidden) */
+#running:not(.hidden) + * ~ #gc-controls,
+body:has(#running:not(.hidden)) #gc-controls { display: flex; }
+/* Simpler: we toggle display via JS on show/hide */
+#gc-controls.visible { display: flex; }
+
+.gc-btn {
+  /* Each button is a 56×56 touch target */
+  width: 56px; height: 56px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px;
+  background: none; border: none;
+  cursor: pointer; outline: none;
+  /* Ghost: 20% opacity, no shadow */
+  opacity: 0.20;
+  transition: opacity 0.2s var(--ease-spring),
+              transform 0.15s var(--ease-spring),
+              filter 0.2s;
+  pointer-events: auto;     /* buttons capture events */
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+/* Hover / active reveal */
+.gc-btn:hover  { opacity: 1; }
+.gc-btn:active { opacity: 1; transform: scale(0.9); }
+
+/* Touch-active class added by JS for mobile */
+.gc-btn.touched { opacity: 1; }
+
+/* Icon SVGs — inherit current color */
+.gc-btn svg {
+  width: 24px; height: 24px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* Label under icon */
+.gc-btn-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px; letter-spacing: .22em;
+  color: currentColor;
+  text-transform: uppercase;
+}
+
+/* Per-button accent colors (inherit into svg + label) */
+.gc-btn.home-btn   { color: rgba(255,255,255,.75); }
+.gc-btn.reset-btn  { color: rgba(255,255,255,.75); }
+.gc-btn.finish-btn { color: var(--green); }
+
+.gc-btn.home-btn:hover,   .gc-btn.home-btn.touched   { filter: drop-shadow(0 0 8px rgba(255,255,255,.35)); }
+.gc-btn.reset-btn:hover,  .gc-btn.reset-btn.touched  { filter: drop-shadow(0 0 8px rgba(255,255,255,.35)); }
+.gc-btn.finish-btn:hover, .gc-btn.finish-btn.touched { filter: drop-shadow(0 0 12px rgba(0,255,0,.55)); }
+
+/* Separator dot between buttons */
+.gc-sep {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(255,255,255,.12);
+  margin: 0 10px;
+  flex-shrink: 0;
+}
+
+/* Legacy controls bar — kept for EMOM PAUSE button wiring,
+   but visually hidden. EMOM uses #gc-controls for Home/Reset/Finish. */
+.controls {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 998;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 16px 20px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0,0,0,.98) 0%, transparent 100%);
+  transition: opacity var(--t-mid);
+}
+/* In giant-mode the legacy controls stay hidden (gc-controls replaces them) */
+#running.giant-mode .controls  { display: none !important; }
+/* In emom-mode keep legacy controls hidden too — gc-controls handles all */
+#running.emom-mode  .controls  { display: none !important; }
+
+.ctrl-btn {
+  font-family: 'Inter', sans-serif; font-weight: 600;
+  font-size: 11px; letter-spacing: .1em;
+  padding: 9px 18px;
+  border: 1px solid var(--border);
+  background: rgba(20,20,20,.9);
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast),
+              background var(--t-fast), transform var(--t-fast);
+  outline: none; text-transform: uppercase;
+}
+.ctrl-btn:hover   { color: var(--text-1); border-color: var(--border-hi); background: var(--surface-2); }
+.ctrl-btn:active  { transform: scale(0.95); }
+.ctrl-btn.primary { border-color: var(--border-hi); color: rgba(255,255,255,.75); }
+
+/* Split sidebar (portrait) */
+#split-sidebar {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  width: 120px; display: flex; flex-direction: column; gap: 5px;
+  z-index: 50; pointer-events: none;
+}
+.sidebar-row {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; line-height: 1.4;
+  color: var(--text-3); text-align: right;
+  letter-spacing: .06em;
+  animation: sidebarIn .2s var(--ease-out-expo) both;
+  border-right: 2px solid var(--border); padding-right: 8px;
+}
+.sidebar-row:last-child { color: #555; border-right-color: var(--border-hi); }
+.sidebar-row .s-round { font-size: 8px; color: var(--text-3); }
+@keyframes sidebarIn {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Split chip (landscape) */
+.split-chip {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: .1em;
+  color: var(--text-3); text-align: right;
+  animation: chipIn .18s var(--ease-out-expo) both;
+}
+.split-chip:last-child { color: #555; }
+@keyframes chipIn {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   EMOM HARDWARE REPLICA — LED Scoreboard
+   Activates when #running has class "emom-mode"
+   ──────────────────────────────────────────────────────────────── */
+.led-font {
+  font-family: 'DSEG7 Classic', 'DSEG7Classic', 'Share Tech Mono', monospace;
+}
+
+#emom-board {
+  display: none;
+  position: fixed; inset: 0; z-index: 3;
+  background: #000;
+  flex-direction: row; align-items: stretch;
+  --led-size: clamp(60px, 16vh, 160px);
+}
+#running.emom-mode #emom-board { display: flex; }
+
+#running.emom-mode .run-mode-tag,
+#running.emom-mode .timer-display,
+#running.emom-mode .set-counter,
+#running.emom-mode .set-progress-wrap,
+#running.emom-mode .set-dots,
+#running.emom-mode #split-popup,
+#running.emom-mode #split-sidebar { display: none !important; }
+
+#emom-set-panel {
+  flex: 0 0 38%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 0 0 0 0;       /* zero horizontal padding — numbers hug the divider */
+  border-right: 1px solid #1a1a1a;
+}
+#emom-time-panel {
+  flex: 0 0 62%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 0 0 0 0;       /* zero horizontal padding */
+}
+
+.led-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(8px, 1.4vw, 12px);
+  letter-spacing: .5em; color: rgba(255,255,255,.14);
+  text-transform: uppercase;
+  margin-bottom: clamp(4px, 1vh, 10px);
+}
+
+.led-number-wrap {
+  position: relative; display: flex;
+  align-items: center; justify-content: center; width: 100%;
+}
+.led-number-wrap::before {
+  font-family: 'DSEG7 Classic','DSEG7Classic','Share Tech Mono',monospace;
+  position: absolute; color: rgba(255,255,255,.045);
+  pointer-events: none; left: 0; right: 0; text-align: center;
+  font-size: var(--led-size);
+}
+#emom-set-panel  .led-number-wrap::before { content: '88'; }
+#emom-time-panel .led-number-wrap::before { content: '88:88'; }
+
+.led-number {
+  font-family: 'DSEG7 Classic','DSEG7Classic','Share Tech Mono',monospace;
+  font-size: var(--led-size); line-height: 1;
+  text-align: center; width: 100%; position: relative; z-index: 1;
+  transition: color .12s, text-shadow .12s;
+}
+#emom-set-num  { color: #00FF00; text-shadow: 0 0 8px #00FF00, 0 0 24px rgba(0,255,0,.6), 0 0 50px rgba(0,255,0,.3); }
+#emom-time-num { color: #FF0000; text-shadow: 0 0 8px #FF0000, 0 0 24px rgba(255,0,0,.6), 0 0 50px rgba(255,0,0,.3); }
+
+@keyframes led-blink { 0%,49% { opacity:1; } 50%,100% { opacity:.12; } }
+
+#emom-board.warning #emom-set-num,
+#emom-board.warning #emom-time-num {
+  color: #FF0000 !important;
+  text-shadow: 0 0 10px #FF0000, 0 0 28px rgba(255,0,0,.8) !important;
+  animation: led-blink .5s step-end infinite;
+}
+#emom-board::after {
+  content:''; position:absolute; inset:0;
+  background: rgba(0,255,0,0); pointer-events:none;
+  transition: background .05s; z-index:10;
+}
+#emom-board.go-flash::after { background: rgba(0,255,0,.18); }
+
+#emom-board.paused #emom-set-num,
+#emom-board.paused #emom-time-num {
+  color: #111 !important; text-shadow: none !important; animation: none !important;
+}
+#running.emom-mode .controls { z-index: 1000; }
+
+/* ────────────────────────────────────────────────────────────────
+   GIANT CLOCK — For Time & AMRAP
+   Activates when #running has class "giant-mode"
+   ──────────────────────────────────────────────────────────────── */
+#giant-clock {
+  display: none;
+  position: fixed; inset: 0; z-index: 4;
+  background: #000;
+  flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  --giant-size: clamp(60px, min(19vw, 22vh), 280px);
+}
+#running.giant-mode #giant-clock { display: flex; }
+
+#running.giant-mode .run-mode-tag,
+#running.giant-mode .timer-display,
+#running.giant-mode .set-counter,
+#running.giant-mode .set-progress-wrap,
+#running.giant-mode .set-dots,
+#running.giant-mode #split-popup,
+#running.giant-mode #split-sidebar,
+#running.giant-mode .controls { display: none !important; }
+
+/* Ghost segments behind giant clock */
+#giant-clock-wrap {
+  position: relative; display: flex;
+  align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+}
+#giant-clock-wrap::before {
+  content: '88:88';
+  font-family: 'DSEG7 Classic','DSEG7Classic','Share Tech Mono',monospace;
+  font-size: var(--giant-size);
+  color: rgba(255,255,255,.04);
+  position: absolute; left:0; right:0;
+  text-align: center; pointer-events: none; line-height: 1;
+}
+
+#giant-time {
+  font-family: 'DSEG7 Classic','DSEG7Classic','Share Tech Mono',monospace;
+  font-size: var(--giant-size);
+  line-height: 1; letter-spacing: .02em; text-align: center;
+  width: 100%; position: relative; z-index: 1;
+  transition: color .2s, text-shadow .2s, opacity .15s;
+}
+
+/* For Time = neon green */
+#giant-clock[data-mode="fortime"] #giant-time {
+  color: #00FF00;
+  text-shadow: 0 0 15px #00FF00, 0 0 40px rgba(0,255,0,.5), 0 0 80px rgba(0,255,0,.2);
+}
+/* AMRAP = neon yellow */
+#giant-clock[data-mode="amrap"] #giant-time {
+  color: #FFFF00;
+  text-shadow: 0 0 15px #FFFF00, 0 0 40px rgba(255,255,0,.45), 0 0 80px rgba(255,255,0,.18);
+}
+
+/* Last 10 sec AMRAP: shift to red */
+#giant-clock[data-mode="amrap"].warn #giant-time {
+  color: #FF2020;
+  text-shadow: 0 0 15px #FF2020, 0 0 40px rgba(255,32,32,.6);
+}
+
+@keyframes giant-blink { 0%,49% { opacity:1; } 50%,100% { opacity:.08; } }
+#giant-clock.blink #giant-time { animation: giant-blink .5s step-end infinite; }
+
+/* Paused: number goes near-dark */
+#running.giant-mode.giant-paused #giant-time { opacity: .1; text-shadow: none; }
+
+/* ── FROZEN state: timer stopped, number stays lit + static ─────
+   Applied when long-press completes and timer is locked.
+   The digit retains full colour (no opacity fade) but loses
+   the continuous glow to signal "captured, not running".       */
+#running.giant-mode.giant-frozen #giant-time {
+  /* keep colour class intact — just remove animated glow */
+  animation: none !important;
+}
+/* Green frozen */
+#giant-clock[data-mode="fortime"].frozen #giant-time {
+  color: #00FF00;
+  text-shadow: 0 0 6px rgba(0,255,0,.4);
+}
+/* Yellow frozen */
+#giant-clock[data-mode="amrap"].frozen #giant-time {
+  color: #FFFF00;
+  text-shadow: 0 0 6px rgba(255,255,0,.35);
+}
+/* Frozen hint label */
+#giant-frozen-label {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 0; right: 0; text-align: center;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: .45em; text-transform: uppercase;
+  color: rgba(255,255,255,0);
+  pointer-events: none; z-index: 25;
+  transition: color .3s;
+}
+#giant-clock.frozen #giant-frozen-label { color: rgba(255,255,255,.25); }
+
+/* ── Long-press SVG ring ─────────────────────────────────────────
+   A conic-gradient circle that GROWS around the clock-wrap.
+   Sits inside #giant-clock-wrap at z-index 0 (behind the number).
+   We size it dynamically in JS by reading the wrap's bounding rect,
+   but default to a safe fallback size.                            */
+#lp-ring {
+  position: absolute;
+  /* centred over the digit cluster */
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  /* Size = roughly the width of "88:88" at current font size.
+     We override width/height in JS for exact fit. */
+  width:  min(94vw, 94vh);
+  height: min(94vw, 94vh);
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(255,255,255,.55) var(--lp-deg, 0deg),
+    rgba(255,255,255,.06) var(--lp-deg, 0deg)
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s;
+  z-index: 0;     /* sits BEHIND the digit (z-index 1) */
+}
+#lp-ring::after {
+  content: '';
+  position: absolute; inset: 4px;
+  border-radius: 50%; background: #000;
+}
+#lp-ring.active { opacity: 1; }
+
+/* Giant splits list (top-right) */
+#giant-splits {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  display: flex; flex-direction: column; gap: 4px;
+  z-index: 10; pointer-events: none;
+}
+.gc-chip {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: .1em;
+  color: #333; text-align: right;
+  animation: chipIn .18s var(--ease-out-expo) both;
+}
+.gc-chip:last-child { color: #555; }
+
+/* Tap flash */
+#giant-flash {
+  position: fixed; inset: 0; z-index: 15;
+  background: rgba(255,255,255,0); pointer-events: none;
+  transition: background .06s;
+}
+#giant-flash.pop { background: rgba(255,255,255,.08); }
+
+/* Gesture hint */
+#giant-hint {
+  position: fixed;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  left:0; right:0; text-align: center;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: .3em;
+  color: rgba(255,255,255,.06); pointer-events: none; z-index: 10;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   FINISH SCREEN
+   ──────────────────────────────────────────────────────────────── */
+#finish { background: var(--bg); gap: 14px; }
+
+.fin-title {
+  font-family: 'Inter', sans-serif; font-weight: 900;
+  font-size: clamp(38px, 10vw, 72px);
+  letter-spacing: -.05em;
+}
+.fin-time {
+  font-family: 'Inter', sans-serif; font-weight: 900;
+  font-size: clamp(58px, 16vw, 130px);
+  letter-spacing: -.05em;
+  line-height: .9; color: var(--text-1);
+}
+.fin-sub  { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: .28em; color: var(--text-3); }
+.fin-stat { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: .16em; color: #444; margin-top: 4px; }
+.fin-btn {
+  font-family: 'Inter', sans-serif; font-weight: 700;
+  font-size: 14px; letter-spacing: .08em; text-transform: uppercase;
+  padding: 13px 36px; margin-top: 16px;
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-2);
+  border-radius: var(--r-md); cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+  outline: none;
+}
+.fin-btn:hover { color: var(--text-1); border-color: var(--border-hi); background: var(--surface-2); }
+
+/* ────────────────────────────────────────────────────────────────
+   REPORT MODAL — Monolithic Workout Summary Poster
+   ─────────────────────────────────────────────────────────────────
+   Design language:
+   · Full-bleed #050505 black — no inner containers, no split lines
+   · Neon yellow (#FFFF00) owns all primary data
+   · Ultra-thin grey horizontal rules divide every row (like a
+     high-contrast sports schedule / pace list)
+   · Monospace fonts everywhere for perfect column alignment
+   · Equal-weight RD label and split time — same CSS var drives both
+   ──────────────────────────────────────────────────────────────── */
+#report-modal {
+  position: fixed; inset: 0; z-index: 10000;
+  background: #050505;
+  display: flex;
+  flex-direction: column;
+  /* Generous, consistent margins on all four sides */
+  padding: max(28px, env(safe-area-inset-top))
+           max(28px, env(safe-area-inset-right))
+           max(16px, env(safe-area-inset-bottom))
+           max(28px, env(safe-area-inset-left));
+  overflow-y: auto;
+}
+#report-modal.hidden { display: none; }
+
+/* ── TOP HEADER ──────────────────────────────────────────────────
+   Left column: label eyebrow + massive total time
+   Right column: round count badge
+   Both flush to the same baseline via align-items: flex-end.     */
+.rpt-poster-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  /* Thin yellow rule separates header from pace list */
+  border-bottom: 1px solid rgba(255,255,0,.18);
+  flex-shrink: 0;
+}
+
+/* Left: label stack */
+.rpt-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rpt-eyebrow {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(8px, 1.8vw, 10px);
+  letter-spacing: .55em;
+  color: rgba(255,255,0,.30);
+  text-transform: uppercase;
+}
+
+/* The giant time — dominant, yellow, fills left side */
+.rpt-total {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(56px, 15vw, 112px);
+  letter-spacing: -.03em;
+  line-height: .88;
+  color: #FFFF00;
+}
+
+.rpt-sub-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(7px, 1.5vw, 9px);
+  letter-spacing: .45em;
+  color: rgba(255,255,0,.15);
+  text-transform: uppercase;
+  margin-top: 6px;
+  display: block;
+}
+
+/* Right: round count */
+.rpt-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-bottom: 6px;
+}
+.rpt-rounds-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(7px, 1.5vw, 9px);
+  letter-spacing: .5em;
+  color: rgba(255,255,0,.22);
+  text-transform: uppercase;
+}
+.rpt-rounds-value {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(32px, 9vw, 64px);
+  letter-spacing: -.02em;
+  line-height: .9;
+  color: rgba(255,255,0,.45);
+}
+
+/* ── PACE LIST ───────────────────────────────────────────────────
+   THREE-column layout: [RD XX] · [Round Complete] · [MM:SS]
+   Matching the "Jule 26" schedule aesthetic from image_10.png:
+   left-aligned round number, centred descriptor, right-aligned time.
+
+   The key to identical visual weight on left & right:
+   --row-size is the single source of truth consumed by BOTH
+   .rpt-rd (left) and .rpt-split-time (right).
+   Change it once → both columns update in perfect lockstep.       */
+.rpt-splits {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* Enough height for 20+ rounds before scrolling kicks in */
+  max-height: 58vh;
+  --row-size: clamp(22px, 5.5vw, 42px);
+}
+
+/* Each row: three-column flex */
+.rpt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  /* Ultra-thin grey divider — the visual "spine" of the pace list */
+  border-bottom: 1px solid rgba(255,255,255,.055);
+  animation: rptRowIn .2s var(--ease-out-expo) both;
+  position: relative;
+}
+.rpt-row:last-child { border-bottom: none; }
+
+/* Stagger entrance — each row slides in from the left */
+.rpt-row:nth-child(1)  { animation-delay: .03s; }
+.rpt-row:nth-child(2)  { animation-delay: .06s; }
+.rpt-row:nth-child(3)  { animation-delay: .09s; }
+.rpt-row:nth-child(4)  { animation-delay: .12s; }
+.rpt-row:nth-child(5)  { animation-delay: .15s; }
+.rpt-row:nth-child(6)  { animation-delay: .18s; }
+.rpt-row:nth-child(7)  { animation-delay: .21s; }
+.rpt-row:nth-child(8)  { animation-delay: .24s; }
+.rpt-row:nth-child(9)  { animation-delay: .27s; }
+.rpt-row:nth-child(10) { animation-delay: .30s; }
+.rpt-row:nth-child(n+11) { animation-delay: .33s; }
+
+@keyframes rptRowIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Fastest-split accent: a 2px yellow hairline on the left edge */
+.rpt-row.fastest { padding-left: 10px; }
+.rpt-row.fastest::before {
+  content: '';
+  position: absolute; left: 0; top: 10px; bottom: 10px;
+  width: 2px; background: #FFFF00; opacity: .6;
+}
+
+/* ── LEFT: Round label ───────────────────────────────────────────
+   Yellow, bold mono. Uses --row-size for guaranteed parity
+   with the split time on the right.                              */
+.rpt-rd {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: var(--row-size);
+  line-height: 1;
+  letter-spacing: -.01em;
+  color: #FFFF00;
+  min-width: 4.8ch;   /* prevents reflow: "RD 01" vs "RD 12" */
+  flex-shrink: 0;
+}
+.rpt-row.fastest .rpt-rd { color: #FFFF00; }
+
+/* ── CENTRE: Row descriptor ──────────────────────────────────────
+   Small, muted — "Round Complete" or "★ Fastest".
+   Never competes with the two large numbers flanking it.
+   flex:1 + text-align:center keeps it perfectly centred.        */
+.rpt-mid-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(8px, 1.6vw, 10px);
+  letter-spacing: .2em;
+  color: rgba(255,255,255,.18);
+  text-transform: uppercase;
+  text-align: center;
+  flex: 1;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rpt-row.fastest .rpt-mid-label { color: rgba(255,255,0,.45); }
+
+/* ── RIGHT: Split time ───────────────────────────────────────────
+   Uses --row-size — SAME as .rpt-rd. Always in sync.            */
+.rpt-split-time {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: var(--row-size);
+  line-height: 1;
+  letter-spacing: -.01em;
+  color: rgba(255,255,255,.88);
+  text-align: right;
+  flex-shrink: 0;
+}
+.rpt-row.fastest .rpt-split-time { color: #FFFF00; }
+
+/* No-splits placeholder */
+.rpt-no-splits {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .38em;
+  color: rgba(255,255,0,.12);
+  text-align: center;
+  padding: 48px 0;
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Compact density for many rows ──────────────────────────────
+   Only row height and type size shrink — three-column structure
+   stays identical. At xcompact, hide the centre descriptor to
+   give maximum space to the two data columns.                   */
+.rpt-splits.compact  { --row-size: clamp(18px, 4.5vw, 34px); }
+.rpt-splits.compact  .rpt-row { padding: 8px 0; }
+.rpt-splits.xcompact { --row-size: clamp(14px, 3.6vw, 26px); }
+.rpt-splits.xcompact .rpt-row { padding: 5px 0; }
+.rpt-splits.xcompact .rpt-mid-label { display: none; }
+
+/* ── POSTER FOOTER ───────────────────────────────────────────────
+   Two muted branding strings at the bottom, separated by a thin
+   yellow rule above. Never competes with the data above it.      */
+.rpt-poster-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-top: 12px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,0,.10);
+}
+.rpt-footer-left,
+.rpt-footer-right {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(6px, 1.3vw, 8px);
+  letter-spacing: .28em;
+  color: rgba(255,255,0,.16);
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+.rpt-footer-right { text-align: right; }
+
+/* ── Action buttons ──────────────────────────────────────────────
+   Minimal — these must not steal focus from the poster data.     */
+.rpt-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 14px;
+  flex-shrink: 0;
+}
+.rpt-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: .25em; text-transform: uppercase;
+  padding: 10px 26px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: none;
+  color: rgba(255,255,255,.2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast);
+  outline: none;
+}
+.rpt-btn:hover { color: rgba(255,255,255,.6); border-color: rgba(255,255,255,.22); }
+.rpt-btn.restart {
+  border-color: rgba(255,255,0,.14);
+  color: rgba(255,255,0,.32);
+}
+.rpt-btn.restart:hover {
+  border-color: rgba(255,255,0,.55);
+  color: #FFFF00;
+}
+
+/* ── Landscape: two-column pace grid ─────────────────────────── */
+@media (orientation: landscape) {
+  #report-modal {
+    padding: max(12px, env(safe-area-inset-top))
+             max(20px, env(safe-area-inset-right))
+             max(8px,  env(safe-area-inset-bottom))
+             max(20px, env(safe-area-inset-left));
+  }
+  .rpt-total        { font-size: clamp(40px, 13vh, 84px); }
+  .rpt-rounds-value { font-size: clamp(24px, 7vh, 52px); }
+  .rpt-splits {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 36px;
+    /* BUG FIX: landscape screens are shorter — 48vh prevents overflow */
+    max-height: 48vh;
+    --row-size: clamp(16px, 4vh, 32px);
+  }
+  /* In the compact grid, hide the centre descriptor to save width */
+  .rpt-splits .rpt-mid-label { display: none; }
+  .rpt-row { padding: 7px 0; }
+  .rpt-poster-footer { padding-top: 6px; margin-top: 6px; }
+  .rpt-actions { margin-top: 8px; }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   MISC: Scanlines, Rotate hint
+   ──────────────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,.04) 2px, rgba(0,0,0,.04) 4px
+  );
+}
+
+#rotate-hint {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15,15,15,.92);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: .18em;
+  padding: 10px 20px; white-space: nowrap;
+  pointer-events: none; opacity: 0;
+  transition: opacity .4s; z-index: 9998;
+}
+#rotate-hint.show { opacity: 1; }
+
+/* ────────────────────────────────────────────────────────────────
+   ORIENTATION TRANSITIONS
+   ──────────────────────────────────────────────────────────────── */
+.timer-display, .cd-num, .set-counter, .set-progress-wrap,
+.run-mode-tag, .set-dots, .controls, .logo, .mode-card,
+.s-header, .s-sub, .start-btn {
+  transition: font-size .35s var(--ease-spring),
+              opacity   .35s var(--ease-spring),
+              transform .35s var(--ease-spring),
+              color     .4s  ease,
+              text-shadow .4s ease;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   LANDSCAPE @media (orientation: landscape)
+   ──────────────────────────────────────────────────────────────── */
+@media (orientation: landscape) {
+  /* HOME */
+  #home { padding-top: max(env(safe-area-inset-top), 12px); padding-bottom: 12px; }
+  #home .logo      { font-size: clamp(20px, 4.5vh, 36px); margin-bottom: 4px; }
+  #home .logo-sub  { margin-bottom: 18px; font-size: 8px; }
+  #home .mode-card {
+    padding: 14px 18px 14px 20px;
+    margin-bottom: 8px;
+    width: min(340px, 62vw);
+    border-radius: 14px;
+  }
+  #home .card-title { font-size: clamp(16px, 3.5vh, 24px); }
+  #home .card-desc  { font-size: 8px; }
+  #home .card-tag   { font-size: 7px; }
+
+  /* SETTINGS */
+  #settings { padding-top: max(env(safe-area-inset-top), 0px); }
+  .s-header { font-size: clamp(22px, 6vh, 42px); margin-top: 40px; margin-bottom: 2px; }
+  .s-sub    { margin-bottom: 12px; }
+  .spinner-box { margin-bottom: 4px; }
+  .sp-val   { font-size: clamp(30px, 8vh, 52px); padding: 4px 0; }
+  .sp-colon { font-size: clamp(30px, 8vh, 52px); }
+  .sp-btn   { padding: 5px 0; font-size: 14px; }
+  .field-hint   { margin-bottom: 10px; }
+  .start-btn    { padding: 12px; margin-bottom: 14px; font-size: clamp(16px, 4.5vh, 22px); }
+
+  /* COUNTDOWN */
+  .cd-num   { font-size: clamp(120px, 68vh, 340px); }
+  .cd-label { font-size: 10px; margin-top: 10px; }
+
+  /* RUNNING */
+  #running { justify-content: center; }
+  .timer-display { font-size: clamp(100px, 40vh, 340px); line-height: .92; z-index: 2; }
+  .run-mode-tag      { display: none; }
+  .set-progress-wrap { display: none; }
+  .set-dots          { display: none; }
+  .set-counter {
+    position: fixed !important;
+    top:  max(10px, env(safe-area-inset-top)) !important;
+    left: max(16px, env(safe-area-inset-left)) !important;
+    margin: 0 !important;
+    font-size: clamp(12px, 2.2vh, 20px) !important;
+    color: var(--text-3) !important;
+    letter-spacing: .1em; z-index: 50; opacity: 1;
+  }
+  .set-counter.active { color: var(--cyan) !important; }
+
+  #split-tap-zone {
+    display: block; position: fixed; inset: 0; z-index: 5; cursor: crosshair;
+  }
+  #split-log {
+    display: flex; position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(16px, env(safe-area-inset-right));
+    bottom: 80px; width: 88px;
+    flex-direction: column-reverse; justify-content: flex-end;
+    gap: 5px; z-index: 20; overflow-y: auto; pointer-events: none;
+  }
+  .controls {
+    opacity: .55 !important;
+    flex-direction: row !important; width: auto !important;
+    left: 50% !important; right: auto !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    transform: translateX(-50%) !important;
+    background: rgba(0,0,0,.65) !important;
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 7px 14px !important; gap: 8px !important;
+    z-index: 999 !important; pointer-events: auto !important;
+    backdrop-filter: blur(12px);
+  }
+  .controls:hover, .controls:focus-within { opacity: 1 !important; }
+  .ctrl-btn { font-size: 10px; padding: 7px 13px; }
+
+  /* EMOM LED landscape */
+  #emom-board { --led-size: clamp(72px, 20vh, 200px); }
+  #emom-set-panel  { padding: 0; }
+  #emom-time-panel { padding: 0; }
+
+  /* Giant clock landscape */
+  #giant-clock { --giant-size: clamp(80px, min(38vh, 20vw), 320px); }
+
+  /* gc-controls landscape — shrink and float centre */
+  #gc-controls {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding-top: 10px;
+    background: linear-gradient(to top, rgba(0,0,0,.5) 0%, transparent 100%);
+  }
+  .gc-btn { width: 48px; height: 48px; gap: 2px; }
+  .gc-btn svg { width: 20px; height: 20px; }
+  .gc-btn-label { font-size: 7px; }
+
+  /* FINISH */
+  .fin-title { font-size: clamp(26px, 8vh, 52px); }
+  .fin-time  { font-size: clamp(46px, 20vh, 116px); }
+}
+
+/* ── Portrait restore ──────────────────────────────────────────── */
+@media (orientation: portrait) {
+  #split-tap-zone { display: none; }
+  #split-log      { display: none; }
+  .set-counter {
+    position: relative !important; top: auto !important; left: auto !important;
+    z-index: 2;
+  }
+  .controls {
+    flex-direction: row !important; width: 100% !important;
+    left: 0 !important; right: 0 !important; bottom: 0 !important;
+    transform: none !important; opacity: 1 !important;
+    background: linear-gradient(to top, rgba(0,0,0,.98) 0%, transparent 100%) !important;
+    border: none !important; border-radius: 0 !important;
+    padding: 16px 20px !important;
+    padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* ── Split sidebar/log orientation ──── */
+@media (orientation: landscape) { #split-sidebar { display: none; } }
+@media (orientation: portrait)  { #split-log     { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- ══════ HOME ══════ -->
+<div class="screen" id="home">
+
+  <!-- Header -->
+  <div class="logo">CF<span class="logo-dot">.</span>TIMER</div>
+  <span class="logo-sub">CROSSFIT &nbsp;·&nbsp; HYROX &nbsp;·&nbsp; FUNCTIONAL TRAINING</span>
+
+  <!-- FOR TIME capsule -->
+  <button class="mode-card ft" onclick="selectMode('fortime')">
+    <div class="card-inner">
+      <div class="card-left">
+        <span class="card-title">For Time</span>
+        <span class="card-desc">Beat the clock &nbsp;·&nbsp; Record every split</span>
+      </div>
+      <span class="card-tag">Count<br>Up</span>
+    </div>
+  </button>
+
+  <!-- AMRAP capsule -->
+  <button class="mode-card am" onclick="selectMode('amrap')">
+    <div class="card-inner">
+      <div class="card-left">
+        <span class="card-title">AMRAP</span>
+        <span class="card-desc">As many rounds as possible</span>
+      </div>
+      <span class="card-tag">Count<br>Down</span>
+    </div>
+  </button>
+
+  <!-- EMOM capsule -->
+  <button class="mode-card em" onclick="selectMode('emom')">
+    <div class="card-inner">
+      <div class="card-left">
+        <span class="card-title">EMOM</span>
+        <span class="card-desc">Every minute on the minute</span>
+      </div>
+      <span class="card-tag">Set<br>Interval</span>
+    </div>
+  </button>
+
+</div>
+
+<!-- ══════ SETTINGS ══════ -->
+<div class="screen hidden" id="settings">
+  <button class="back-btn" onclick="goHome()">←</button>
+  <div class="s-header green" id="s-title">FOR TIME</div>
+  <div class="s-sub" id="s-sub">SET TARGET TIME</div>
+
+  <!-- FOR TIME / AMRAP block -->
+  <div id="std-time-block">
+    <div class="field-label" id="std-time-label">TARGET TIME</div>
+    <div class="spinner-box">
+      <div class="sp-col">
+        <button class="sp-btn" onclick="spin('min',1)">▲</button>
+        <div class="sp-val" id="spin-min">20</div>
+        <button class="sp-btn" onclick="spin('min',-1)">▼</button>
+      </div>
+      <div class="sp-colon">:</div>
+      <div class="sp-col">
+        <button class="sp-btn" onclick="spin('sec',1)">▲</button>
+        <div class="sp-val" id="spin-sec">00</div>
+        <button class="sp-btn" onclick="spin('sec',-1)">▼</button>
+      </div>
+    </div>
+    <div class="field-hint">MM : SS</div>
+  </div>
+
+  <!-- EMOM Monolithic Panel -->
+  <div id="emom-block" class="hidden" style="display:none;flex-direction:column;align-items:center;">
+
+    <!-- Thin accent line below EMOM title (shown via JS) -->
+    <div class="s-accent-line" id="emom-accent-line"></div>
+
+    <div class="em-panel">
+
+      <!-- ── ROW 1: Total Sets ──────────────────────────────────── -->
+      <div class="em-row">
+        <span class="em-label">Total<br>Sets</span>
+
+        <!-- Centre: single large digit -->
+        <div class="em-value">
+          <span class="em-digit" id="spin-sets">10</span>
+        </div>
+
+        <!-- Right: chevrons + unit -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;">
+          <div class="em-chevrons">
+            <button class="em-chev" onclick="spin('sets',1)" aria-label="Sets up">
+              <svg viewBox="0 0 14 14"><polyline points="2,10 7,4 12,10"/></svg>
+            </button>
+            <button class="em-chev" onclick="spin('sets',-1)" aria-label="Sets down">
+              <svg viewBox="0 0 14 14"><polyline points="2,4 7,10 12,4"/></svg>
+            </button>
+          </div>
+          <span class="em-unit">SETS</span>
+        </div>
+      </div>
+
+      <!-- Thin divider -->
+      <div class="em-divider"></div>
+
+      <!-- ── ROW 2: Time Per Set ────────────────────────────────── -->
+      <div class="em-row">
+        <span class="em-label">Time<br>Per Set</span>
+
+        <!-- Centre: MM : SS with independent chevron columns -->
+        <div class="em-time-group">
+          <!-- MM column -->
+          <div class="em-digit-col">
+            <div class="em-chevrons">
+              <button class="em-chev" onclick="spin('emin',1)" aria-label="Minutes up">
+                <svg viewBox="0 0 14 14"><polyline points="2,10 7,4 12,10"/></svg>
+              </button>
+              <button class="em-chev" onclick="spin('emin',-1)" aria-label="Minutes down">
+                <svg viewBox="0 0 14 14"><polyline points="2,4 7,10 12,4"/></svg>
+              </button>
+            </div>
+            <span class="em-digit" id="spin-emin">03</span>
+            <span class="em-unit">MM</span>
+          </div>
+
+          <!-- Colon -->
+          <span class="em-colon">:</span>
+
+          <!-- SS column -->
+          <div class="em-digit-col">
+            <div class="em-chevrons">
+              <button class="em-chev" onclick="spin('esec',1)" aria-label="Seconds up">
+                <svg viewBox="0 0 14 14"><polyline points="2,10 7,4 12,10"/></svg>
+              </button>
+              <button class="em-chev" onclick="spin('esec',-1)" aria-label="Seconds down">
+                <svg viewBox="0 0 14 14"><polyline points="2,4 7,10 12,4"/></svg>
+              </button>
+            </div>
+            <span class="em-digit" id="spin-esec">00</span>
+            <span class="em-unit">SS</span>
+          </div>
+        </div>
+
+        <!-- Right spacer to keep label/value/chevron rhythm consistent -->
+        <div style="width:32px;flex-shrink:0;"></div>
+      </div>
+
+    </div><!-- /.em-panel -->
+
+  </div><!-- /#emom-block -->
+
+  <button class="start-btn green" id="start-btn" onclick="startCountdown()">Start</button>
+</div>
+
+<!-- ══════ COUNTDOWN ══════ -->
+<div class="screen hidden" id="countdown" onclick="initAudio()">
+  <div class="cd-num" id="cd-num">10</div>
+  <div class="cd-label" id="cd-label">GET READY</div>
+  <div class="audio-hint" id="audio-hint">TAP ANYWHERE TO ENABLE AUDIO</div>
+</div>
+
+<!-- ══════ RUNNING ══════ -->
+<div class="screen hidden" id="running">
+  <div id="flash-overlay"></div>
+  <div id="split-flash"></div>
+
+  <div id="split-tap-zone" onclick="recordSplit(event)"></div>
+  <div id="split-log"></div>
+  <div id="split-sidebar"></div>
+
+  <!-- ══ GIANT CLOCK — For Time & AMRAP ══ -->
+  <div id="giant-clock" data-mode="fortime">
+    <div id="giant-flash"></div>
+    <div id="giant-splits"></div>
+    <div id="giant-frozen-label">LOCKED &nbsp;·&nbsp; SCREENSHOT READY</div>
+    <div id="giant-clock-wrap">
+      <div id="lp-ring"></div>
+      <div id="giant-time">00:00</div>
+    </div>
+    <div id="giant-hint">TAP · SPLIT &nbsp;&nbsp;&nbsp; HOLD 1.5S · FINISH</div>
+  </div>
+
+  <!-- ══ EMOM LED BOARD ══ -->
+  <div id="emom-board">
+    <div id="emom-set-panel">
+      <div class="led-label">SET</div>
+      <div class="led-number-wrap">
+        <div class="led-number" id="emom-set-num">01</div>
+      </div>
+    </div>
+    <div id="emom-time-panel">
+      <div class="led-label">TIME</div>
+      <div class="led-number-wrap">
+        <div class="led-number" id="emom-time-num">03:00</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="set-counter hidden" id="set-counter">SET 1 / 10</div>
+  <div class="set-progress-wrap hidden" id="set-progress-wrap">
+    <div id="set-progress-bar" style="width:0%"></div>
+  </div>
+
+  <div class="run-mode-tag" id="run-mode-tag">FOR TIME</div>
+  <div class="timer-display green" id="timer-display">00:00</div>
+  <div id="split-popup"></div>
+  <div class="set-dots hidden" id="set-dots"></div>
+
+  <!-- Legacy controls — hidden in giant/emom mode, kept for PAUSE wiring -->
+  <div class="controls" id="run-controls">
+    <button class="ctrl-btn" onclick="resetTimer()">Reset</button>
+    <button class="ctrl-btn primary" id="pause-btn" onclick="togglePause()">Pause</button>
+    <button class="ctrl-btn" id="finish-btn" onclick="gcFireFinish()" style="display:none;">Finish</button>
+    <button class="ctrl-btn" onclick="goHome()">Home</button>
+  </div>
+</div>
+
+<!-- ══════ GC-CONTROLS — Universal stealth icon bar ══════
+     Lives OUTSIDE #running so it's never covered by any
+     overlay inside #running (emom-board z:3, giant-clock z:4).
+     Shown/hidden via JS alongside the running screen.         -->
+<div id="gc-controls" aria-label="Timer Controls">
+
+  <!-- HOME button -->
+  <button class="gc-btn home-btn" id="gc-home-btn" aria-label="Home"
+          onclick="gcCtrlHome(event)">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/>
+      <path d="M9 21V12h6v9"/>
+    </svg>
+    <span class="gc-btn-label">Home</span>
+  </button>
+
+  <div class="gc-sep"></div>
+
+  <!-- RESET button -->
+  <button class="gc-btn reset-btn" id="gc-reset-btn" aria-label="Reset"
+          onclick="gcCtrlReset(event)">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 12a9 9 0 109-9 9 9 0 00-4.5 1.18"/>
+      <polyline points="3 3 3 9 9 9"/>
+    </svg>
+    <span class="gc-btn-label">Reset</span>
+  </button>
+
+  <div class="gc-sep"></div>
+
+  <!-- FINISH button -->
+  <button class="gc-btn finish-btn" id="gc-finish-btn" aria-label="Finish"
+          onclick="gcCtrlFinish(event)">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <!-- Flag icon -->
+      <path d="M4 21V4"/>
+      <path d="M4 4l14 4-14 4"/>
+    </svg>
+    <span class="gc-btn-label">Finish</span>
+  </button>
+
+</div>
+
+<!-- ══════ FINISH ══════ -->
+<div class="screen hidden" id="finish">
+  <div class="fin-title" id="fin-title">TIME!</div>
+  <div class="fin-time"  id="fin-time">20:00</div>
+  <div class="fin-sub"   id="fin-sub">FOR TIME</div>
+  <div class="fin-stat"  id="fin-stat"></div>
+  <button class="fin-btn" onclick="goHome()">← Home</button>
+</div>
+
+<!-- ══════ REPORT MODAL — Workout Summary Poster ══════ -->
+<div id="report-modal" class="hidden">
+
+  <!-- HEADER: left = total time, right = round count -->
+  <div class="rpt-poster-header">
+    <div class="rpt-header-left">
+      <div class="rpt-eyebrow" id="rpt-eyebrow">TOTAL TIME</div>
+      <div class="rpt-total" id="rpt-total">00:00</div>
+      <span class="rpt-sub-label" id="rpt-sub-label">FOR TIME</span>
+    </div>
+    <div class="rpt-header-right">
+      <div class="rpt-rounds-label">RDS</div>
+      <div class="rpt-rounds-value" id="rpt-rounds-value">—</div>
+    </div>
+  </div>
+
+  <!-- PACE LIST: populated by JS -->
+  <div class="rpt-splits" id="rpt-splits"></div>
+  <div class="rpt-no-splits hidden" id="rpt-no-splits">NO SPLITS RECORDED</div>
+
+  <!-- FOOTER BRANDING + ACTIONS -->
+  <div class="rpt-poster-footer">
+    <div class="rpt-footer-left">Personal CF Timer<br>Workout Record</div>
+    <div class="rpt-footer-right">Athlete<br>Tracking System</div>
+  </div>
+
+  <div class="rpt-actions">
+    <button class="rpt-btn" onclick="reportHome()">Home</button>
+    <button class="rpt-btn restart" onclick="reportRestart()">Restart</button>
+  </div>
+
+</div>
+
+<!-- Rotate hint -->
+<div id="rotate-hint">⟳ 建议旋转手机以获得最佳视野</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let mode = 'fortime';
+
+// Std spinners
+let spinMin = 20, spinSec = 0, targetSecs = 20 * 60;
+
+// EMOM spinners
+let emomSets = 10;
+let emomEMin = 3,  emomESec = 0;
+let emomSetSecs  = 180;
+let emomTotalSecs = 1800;
+
+// Runtime
+let timerInterval = null;
+let elapsed = 0, remaining = 0, paused = false;
+let emomCurrentSet = 1;
+
+// Wake Lock
+let wakeLock = null;
+
+// Flash
+let flashTimeout = null;
+
+// ══════════════════════════════════════════════
+//  ROUTING
+// ══════════════════════════════════════════════
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('hidden', s.id !== id));
+  // Show #gc-controls only while running screen is active
+  const gcCtrl = document.getElementById('gc-controls');
+  if (gcCtrl) gcCtrl.classList.toggle('visible', id === 'running');
+}
+
+function goHome() {
+  clearTimeout(gcFinishTimer);   // BUG FIX: cancel pending showReport if Home pressed fast
+  // #region agent log: goHome cancels gcFinishTimer
+  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H2',location:'cf-timer-preview.html:goHome',message:'goHome() called; gcFinishTimer cleared',data:{gcFinishTimerCleared:true,timerIntervalIsNull:timerInterval===null,mode},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  clearInterval(timerInterval); timerInterval = null;
+  clearFlash(); releaseWakeLock();
+  clearSplits();
+  lastSplitTimestamp = 0;
+  hideReport();
+  tryUnlockOrientation();
+  gcCancelLongPress();
+  gcResetFrozen();
+  const run = document.getElementById('running');
+  run.classList.remove('emom-mode', 'giant-mode', 'giant-paused');
+  document.getElementById('emom-board').classList.remove('paused', 'warning', 'go-flash');
+  const gc = document.getElementById('giant-clock');
+  gc.classList.remove('warn', 'blink', 'frozen');
+  show('home');
+}
+
+// ══════════════════════════════════════════════
+//  MODE SELECTION
+// ══════════════════════════════════════════════
+function selectMode(m) {
+  mode = m;
+  const title   = document.getElementById('s-title');
+  const sub     = document.getElementById('s-sub');
+  const stdB    = document.getElementById('std-time-block');
+  const emomB   = document.getElementById('emom-block');
+  const startB  = document.getElementById('start-btn');
+  const stdLbl  = document.getElementById('std-time-label');
+  const accentL = document.getElementById('emom-accent-line');
+
+  if (m === 'fortime') {
+    title.textContent = 'FOR TIME'; title.className = 's-header green';
+    sub.textContent   = 'SET TARGET TIME (OPTIONAL)';
+    stdLbl.textContent = 'TARGET TIME';
+    startB.className  = 'start-btn green';
+    spinMin = 20; spinSec = 0;
+    stdB.style.display = ''; stdB.classList.remove('hidden');
+    emomB.style.display = 'none';
+    if (accentL) accentL.classList.remove('visible');
+  } else if (m === 'amrap') {
+    title.textContent = 'AMRAP'; title.className = 's-header yellow';
+    sub.textContent   = 'SET TOTAL TIME';
+    stdLbl.textContent = 'TOTAL TIME';
+    startB.className  = 'start-btn yellow';
+    spinMin = 15; spinSec = 0;
+    stdB.style.display = ''; stdB.classList.remove('hidden');
+    emomB.style.display = 'none';
+    if (accentL) accentL.classList.remove('visible');
+  } else {
+    title.textContent = 'EMOM'; title.className = 's-header cyan';
+    sub.textContent   = 'CONFIGURE YOUR WORKOUT PANEL';
+    startB.className  = 'start-btn cyan';
+    stdB.style.display = 'none';
+    emomB.style.display = 'flex'; emomB.classList.remove('hidden');
+    if (accentL) accentL.classList.add('visible');
+  }
+
+  updateStdDisplay(); updateEmomDisplay();
+  show('settings');
+}
+
+// ══════════════════════════════════════════════
+//  SPINNERS
+// ══════════════════════════════════════════════
+function spin(unit, d) {
+  switch(unit) {
+    case 'min':  spinMin  = Math.max(0, Math.min(99, spinMin  + d)); break;
+    case 'sec':  spinSec  = (spinSec  + d + 60) % 60;                break;
+    case 'sets': emomSets = Math.max(1, Math.min(99, emomSets + d)); break;
+    case 'emin': emomEMin = Math.max(0, Math.min(59, emomEMin + d)); break;
+    case 'esec': emomESec = (emomESec + d + 60) % 60;                break;
+  }
+  updateStdDisplay(); updateEmomDisplay();
+}
+
+function updateStdDisplay() {
+  document.getElementById('spin-min').textContent = pad(spinMin);
+  document.getElementById('spin-sec').textContent = pad(spinSec);
+  targetSecs = spinMin * 60 + spinSec;
+}
+
+function updateEmomDisplay() {
+  document.getElementById('spin-sets').textContent = pad(emomSets);
+  document.getElementById('spin-emin').textContent = pad(emomEMin);
+  document.getElementById('spin-esec').textContent = pad(emomESec);
+  emomSetSecs   = emomEMin * 60 + emomESec;
+  emomTotalSecs = emomSets * emomSetSecs;
+}
+
+// Touch/wheel for spinners
+function attachSpinner(id, unit) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let sy = 0;
+  el.addEventListener('touchstart', e => { sy = e.touches[0].clientY; }, { passive: true });
+  el.addEventListener('touchend',   e => {
+    const dy = sy - e.changedTouches[0].clientY;
+    if (Math.abs(dy) > 10) spin(unit, dy > 0 ? 1 : -1);
+  });
+  el.addEventListener('wheel', e => { e.preventDefault(); spin(unit, e.deltaY < 0 ? 1 : -1); }, { passive: false });
+}
+['spin-min','spin-sec','spin-sets','spin-emin','spin-esec'].forEach((id, i) => {
+  attachSpinner(id, ['min','sec','sets','emin','esec'][i]);
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  AUDIO ENGINE  —  PENETRATION-GRADE · iOS-SAFE · DEBUGGABLE
+//  Designed to cut through 90dB gym music on a phone speaker.
+//
+//  SIGNAL CHAIN (per note):
+//
+//  Oscillator A (square)  ──┐
+//  Oscillator B (sawtooth)──┤→ envGain → compressor → masterGain → out
+//  Oscillator C (square,  ──┘   (ADSR)   (limiter)    (volume bus)
+//               detuned +7)
+//
+//  · Two oscillators per note: square + sawtooth layered for maximum
+//    spectral density and harmonic richness — cuts through any mix.
+//  · A detuned third oscillator (+7 cents) adds a subtle beating
+//    effect that keeps the ear's attention even in loud environments.
+//  · DynamicsCompressorNode acts as a brickwall limiter, preventing
+//    clipping while maximising perceived loudness.
+//  · masterGain is the DUCKING BUS — reduce it to duck background music.
+//
+//  ── VOLUME KNOBS (change these to tune loudness) ──────────────────
+//  MASTER_VOL : 0.0–1.0  overall output              → default 1.0
+//  BEEP_VOL   : 0.0–1.0  per-note envelope peak      → default 0.92
+//  ──────────────────────────────────────────────────────────────────
+const MASTER_VOL = 1.0;   // 🔊 MASTER VOLUME   (raise = louder overall)
+const BEEP_VOL   = 0.92;  // 🔔 BEEP PEAK GAIN  (raise = louder individual beeps)
+
+let audioCtx    = null;
+let masterGain  = null;   // ducking bus
+let compressor  = null;   // brickwall limiter
+
+// ── Step 1: Build context + chain once ────────────────────────────
+// IMPORTANT: This must be called synchronously inside a user-gesture
+// handler. DO NOT await before calling this — the browser's gesture
+// window closes the moment the call stack yields to a Promise.
+function ensureAudioCtx() {
+  if (audioCtx) return true;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) {
+      console.warn('[CF-AUDIO] ❌ Web Audio API not supported on this device.');
+      return false;
+    }
+
+    audioCtx = new AC(); // ← SYNCHRONOUS — this is what unlocks iOS
+
+    compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -3;
+    compressor.knee.value      = 0;
+    compressor.ratio.value     = 20;
+    compressor.attack.value    = 0.001;
+    compressor.release.value   = 0.1;
+
+    masterGain = audioCtx.createGain();
+    masterGain.gain.setValueAtTime(MASTER_VOL, audioCtx.currentTime);
+
+    compressor.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+
+    console.info(`[CF-AUDIO] ✅ AudioContext created. State: ${audioCtx.state}. SampleRate: ${audioCtx.sampleRate}Hz`);
+    return true;
+  } catch(e) {
+    console.error('[CF-AUDIO] ❌ Context creation failed:', e);
+    return false;
+  }
+}
+
+// ── Step 2: Resume suspended context ──────────────────────────────
+// Returns a Promise but the SYNC creation in ensureAudioCtx() is
+// what actually unlocks iOS. This just resolves the 'suspended'
+// state that Chrome/Safari set automatically post-creation.
+async function resumeAudio() {
+  if (!ensureAudioCtx()) return;
+  if (audioCtx.state === 'suspended') {
+    try {
+      await audioCtx.resume();
+      console.info(`[CF-AUDIO] ▶ Context resumed. State: ${audioCtx.state}`);
+    } catch(e) {
+      console.error('[CF-AUDIO] ❌ resume() failed:', e);
+      // Non-fatal — timer must still run even if audio fails
+    }
+  }
+  if (audioCtx.state === 'running') {
+    const hint = document.getElementById('audio-hint');
+    if (hint) hint.style.display = 'none';
+    console.info('[CF-AUDIO] ✅ Audio is RUNNING — beeps will be heard.');
+  } else {
+    console.warn(`[CF-AUDIO] ⚠ Audio state after resume: "${audioCtx.state}" — beeps may be silent.`);
+  }
+}
+
+// Legacy entry point for countdown screen tap
+function initAudio() { resumeAudio(); }
+
+// ── Core layered tone generator ────────────────────────────────────
+// BUG FIX: if context is 'suspended', attempt an inline resume()
+// instead of silently dropping the note. This handles race conditions
+// where tone() is called before the async resume chain completes.
+function tone(freq, dur, vol = 1.0, delayMs = 0, label = 'beep') {
+  if (!audioCtx) {
+    console.warn(`[CF-AUDIO] ⚠ ${label}: audioCtx is null — call resumeAudio() first.`);
+    return;
+  }
+
+  // If suspended (race condition or page re-focus), try to resume inline
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => {
+      console.info(`[CF-AUDIO] ↩ Inline resume succeeded for ${label}`);
+      _playTone(freq, dur, vol, delayMs, label);
+    }).catch(e => {
+      console.warn(`[CF-AUDIO] ⚠ ${label}: inline resume failed — silent.`, e);
+    });
+    return;
+  }
+
+  if (audioCtx.state !== 'running') {
+    console.warn(`[CF-AUDIO] ⚠ ${label}: skipped — context state is "${audioCtx.state}"`);
+    return;
+  }
+
+  _playTone(freq, dur, vol, delayMs, label);
+}
+
+// Internal: the actual oscillator scheduling (never call directly)
+function _playTone(freq, dur, vol, delayMs, label) {
+  const fireAt  = audioCtx.currentTime + delayMs / 1000;
+  const peakVol = Math.min(vol * BEEP_VOL, 1.0);
+
+  console.debug(
+    `[CF-AUDIO] 🔔 ${label} | freq=${freq}Hz dur=${(dur*1000).toFixed(0)}ms ` +
+    `vol=${peakVol.toFixed(2)} delay=${delayMs}ms fireAt=${fireAt.toFixed(3)}s`
+  );
+
+  try {
+    const envGain = audioCtx.createGain();
+    envGain.connect(compressor);
+
+    const attackEnd  = fireAt + 0.005;
+    const releaseEnd = fireAt + dur;
+    envGain.gain.setValueAtTime(0.0001, fireAt);
+    envGain.gain.linearRampToValueAtTime(peakVol, attackEnd);
+    envGain.gain.setValueAtTime(peakVol, attackEnd);
+    envGain.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
+
+    const osc1 = audioCtx.createOscillator();
+    osc1.type  = 'square';
+    osc1.frequency.setValueAtTime(freq, fireAt);
+    osc1.connect(envGain);
+
+    const osc2 = audioCtx.createOscillator();
+    osc2.type  = 'sawtooth';
+    osc2.frequency.setValueAtTime(freq, fireAt);
+    osc2.connect(envGain);
+
+    const osc3 = audioCtx.createOscillator();
+    osc3.type  = 'square';
+    osc3.frequency.setValueAtTime(freq * Math.pow(2, 7/1200), fireAt);
+    osc3.connect(envGain);
+
+    const stopAt = releaseEnd + 0.015;
+    osc1.start(fireAt); osc1.stop(stopAt);
+    osc2.start(fireAt); osc2.stop(stopAt);
+    osc3.start(fireAt); osc3.stop(stopAt);
+
+    osc1.onended = () => {
+      try { osc1.disconnect(); osc2.disconnect(); osc3.disconnect(); envGain.disconnect(); } catch(_) {}
+    };
+  } catch(e) {
+    console.error(`[CF-AUDIO] ❌ _playTone() error for ${label}:`, e);
+  }
+}
+
+// ── DUCKING BUS ────────────────────────────────────────────────────
+// Connect background music nodes TO masterGain to get ducking.
+// Usage:
+//   duckAudio(0.15, 0.04)      → duck to 15% over 40ms
+//   duckAudio(MASTER_VOL, 0.3) → restore over 300ms
+function duckAudio(targetVol, rampSecs) {
+  if (!masterGain || !audioCtx) return;
+  masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, audioCtx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(targetVol, audioCtx.currentTime + rampSecs);
+  console.debug(`[CF-AUDIO] 🎚 Duck → ${targetVol} over ${rampSecs}s`);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  SOUND PALETTE  —  all timings tuned for gym environment
+// ══════════════════════════════════════════════════════════════════
+
+// ── 3-2-1 countdown ticks (pre-start or EMOM/AMRAP warning) ───────
+// 880Hz A5 — chosen because 880Hz sits in the most sensitive range
+// of human hearing (1–4kHz), so it appears louder at the same dB.
+// Square wave maximises harmonic content above the music's midrange.
+// n = 3 | 2 | 1: pitch rises with urgency
+function cdBeep() {
+  // Used on 10-9-8…4 countdown screen — neutral alert
+  tone(880, 0.15, 1.0, 0, 'cd-tick');
+}
+
+function warnBeep(n) {
+  // Rising pitch: 3→880, 2→1046, 1→1319 Hz (A5→C6→E6 — major triad, tension up)
+  const freqMap = { 3: 880, 2: 1046, 1: 1319 };
+  const f = freqMap[n] || 880;
+  console.info(`[CF-AUDIO] ⚡ warnBeep n=${n} → ${f}Hz`);
+  tone(f, 0.15, 1.0, 0, `warn-${n}`);
+}
+
+// ── GO / Set-start horn ────────────────────────────────────────────
+// Three ascending stabs scheduled precisely on the audio clock.
+// No setTimeout() — all three fire from the same JS call, guaranteed
+// sample-accurate relative timing.
+function setStartBeep() {
+  console.info('[CF-AUDIO] 🚀 setStartBeep fired');
+  tone(880,  0.12, 0.8,   0,  'go-1');  // A5
+  tone(1100, 0.12, 0.9,  80,  'go-2');  // C#6
+  tone(1319, 0.50, 1.0, 160,  'go-3');  // E6 — held, rings out
+}
+
+// ── Session-end long horn ──────────────────────────────────────────
+// Starts low, rises — classic air-horn envelope.
+// 500ms total gives it presence without over-staying.
+function longBeep() {
+  console.info('[CF-AUDIO] 🏁 longBeep fired');
+  tone(880,  0.08, 0.7,   0, 'end-1');  // A5  — punch
+  tone(1046, 0.10, 0.85,  60, 'end-2'); // C6  — rise
+  tone(1319, 0.55, 1.0,  140, 'end-3'); // E6  — sustain
+}
+
+// ══════════════════════════════════════════════
+//  10-SEC COUNTDOWN
+// ══════════════════════════════════════════════
+let cdVal = 10, cdInterval = null;
+
+async function startCountdown() {
+  if (mode === 'emom' && emomSetSecs < 5)  { alert('每组时长至少 5 秒！');  return; }
+  if (mode === 'amrap' && targetSecs === 0) { alert('请设置时间！'); return; }
+
+  // ── AUDIO UNLOCK (must happen synchronously in this user-gesture) ──
+  // Step 1: create the AudioContext NOW, synchronously, while the
+  // browser's gesture window is still open. This is what actually
+  // unlocks iOS Safari — NOT the await below.
+  ensureAudioCtx();
+
+  // Step 2: fire-and-forget the async resume. We do NOT await it.
+  // The timer countdown starts immediately regardless of whether
+  // audio unlocks. Audio failure must NEVER stall the timer.
+  resumeAudio().catch(e => console.warn('[CF-AUDIO] resume error (non-fatal):', e));
+  // ────────────────────────────────────────────────────────────────
+
+  showRotateHint();
+  tryLockLandscape();
+
+  cdVal = 10;
+  show('countdown');
+  const el = document.getElementById('cd-num');
+  el.textContent = '10';
+  el.style.color = '';
+  el.style.textShadow = '';
+  document.getElementById('cd-label').textContent = 'GET READY';
+  document.getElementById('audio-hint').style.display = '';
+
+  clearInterval(cdInterval);
+  cdInterval = setInterval(() => {
+    cdVal--;
+    if (cdVal <= 0) {
+      clearInterval(cdInterval);
+      longBeep();
+      el.textContent = 'GO!';
+      el.style.color = 'var(--green)';
+      el.style.textShadow = '0 0 55px rgba(57,255,20,.7)';
+      document.getElementById('cd-label').textContent = '';
+      // #region agent log: countdown schedules startTimer
+      fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H4',location:'cf-timer-preview.html:startCountdown',message:'setTimeout(startTimer,800) scheduled',data:{mode, cdVal, elapsed, remaining, paused},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      setTimeout(startTimer, 800);
+      return;
+    }
+    el.textContent = cdVal;
+    el.classList.remove('cd-beat');
+    void el.offsetWidth;
+    el.classList.add('cd-beat');
+    if (cdVal <= 3) cdBeep();
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════
+//  TIMER START
+// ══════════════════════════════════════════════
+function startTimer() {
+  elapsed = 0; paused = false;
+  // #region agent log: startTimer entry
+  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H4',location:'cf-timer-preview.html:startTimer',message:'startTimer() entered',data:{mode, elapsed, remaining, paused, timerIntervalIsNull:timerInterval===null, gcFrozen},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  clearFlash();
+  clearSplits();
+  lastSplitTimestamp = 0;
+  gcResetFrozen();                  // ensure not frozen from previous session
+  document.getElementById('pause-btn').textContent = 'PAUSE';
+  document.getElementById('timer-display').classList.remove('paused');
+
+  // Show FINISH button only in For Time mode
+  const finishBtn = document.getElementById('finish-btn');
+  finishBtn.style.display = mode === 'fortime' ? '' : 'none';
+
+  const display   = document.getElementById('timer-display');
+  const modeTag   = document.getElementById('run-mode-tag');
+  const setCtr    = document.getElementById('set-counter');
+  const setPWrap  = document.getElementById('set-progress-wrap');
+  const dotsEl    = document.getElementById('set-dots');
+
+  if (mode === 'fortime') {
+    document.getElementById('running').classList.add('giant-mode');
+    document.getElementById('giant-clock').dataset.mode = 'fortime';
+    document.getElementById('giant-clock').classList.remove('warn', 'blink');
+    document.getElementById('giant-time').textContent = '00:00';
+    document.getElementById('giant-splits').innerHTML = '';
+    display.className   = 'timer-display green';
+    display.textContent = '00:00';
+    modeTag.textContent = 'FOR TIME';
+    setCtr.classList.add('hidden');
+    setPWrap.classList.add('hidden');
+    dotsEl.classList.add('hidden');
+
+  } else if (mode === 'amrap') {
+    remaining = targetSecs;
+    document.getElementById('running').classList.add('giant-mode');
+    document.getElementById('giant-clock').dataset.mode = 'amrap';
+    document.getElementById('giant-clock').classList.remove('warn', 'blink');
+    document.getElementById('giant-time').textContent = formatTime(remaining);
+    document.getElementById('giant-splits').innerHTML = '';
+    display.className   = 'timer-display yellow';
+    display.textContent = formatTime(remaining);
+    modeTag.textContent = 'AMRAP';
+    setCtr.classList.add('hidden');
+    setPWrap.classList.add('hidden');
+    dotsEl.classList.add('hidden');
+
+  } else {
+    // EMOM — activate LED hardware board
+    emomCurrentSet = 1;
+    remaining      = emomSetSecs;
+    document.getElementById('running').classList.add('emom-mode');
+    modeTag.textContent = 'EMOM';
+    setCtr.classList.remove('hidden');
+    setPWrap.classList.remove('hidden');
+    dotsEl.classList.remove('hidden');
+    updateSetCounter(true);
+    refreshProgressBar();
+    buildDots();
+    // Sync LED board initial state
+    ledSetNum(emomCurrentSet);
+    ledTimeNum(remaining);
+    ledClearWarning();
+    ledGoFlash();
+    // Play start beep for set 1
+    setStartBeep();
+  }
+
+  show('running');
+  requestWakeLock();
+  clearInterval(timerInterval);
+  // Drift-corrected tick: anchor to wall-clock so accumulated error stays < 1ms
+  // Pure setInterval(tick,1000) drifts ~15ms/min on busy JS threads.
+  let _tickOrigin = performance.now();
+  let _tickCount  = 0;
+  timerInterval = setInterval(() => {
+    _tickCount++;
+    const expected = _tickOrigin + _tickCount * 1000;
+    const drift    = performance.now() - expected;
+    // If we're running behind by more than half a tick, compensate next interval
+    // (browser clamps minimum to ~4ms so we just log; actual correction is passive)
+    if (Math.abs(drift) > 50) {
+      console.debug(`[TIMER] drift ${drift.toFixed(0)}ms at tick ${_tickCount}`);
+    }
+    tick();
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════
+//  TICK  — called every second
+// ══════════════════════════════════════════════
+function tick() {
+  if (paused) return;
+  elapsed++;
+
+  /* ── FOR TIME ── */
+  if (mode === 'fortime') {
+    document.getElementById('timer-display').textContent = formatTime(elapsed);
+    document.getElementById('giant-time').textContent    = formatTime(elapsed);
+    if (targetSecs > 0 && elapsed >= targetSecs) {
+      clearInterval(timerInterval); longBeep(); showFinish();
+    }
+    return;
+  }
+
+  /* ── AMRAP ── */
+  if (mode === 'amrap') {
+    remaining--;
+    const d  = document.getElementById('timer-display');
+    const gc = document.getElementById('giant-clock');
+    d.textContent = formatTime(remaining);
+    document.getElementById('giant-time').textContent = formatTime(remaining);
+    if (remaining <= 10 && remaining > 0) {
+      d.className = 'timer-display red';
+      gc.classList.add('warn');
+    }
+    if (remaining <= 3 && remaining > 0) {
+      warnBeep(remaining);
+      triggerFlash();
+      gc.classList.add('blink');
+    }
+    if (remaining <= 0) { clearInterval(timerInterval); longBeep(); showFinish(); }
+    return;
+  }
+
+  /* ── EMOM ── */
+  remaining--;
+  ledTimeNum(remaining);
+  refreshProgressBar();
+
+  // Last-3-sec warning of current set
+  if (remaining <= 3 && remaining > 0) {
+    warnBeep(remaining);
+    triggerFlash();
+    ledSetWarning();   // both numbers turn red + blink on LED board
+  }
+
+  // Set complete
+  if (remaining <= 0) {
+    ledClearWarning();
+    if (emomCurrentSet >= emomSets) {
+      // All sets done
+      clearInterval(timerInterval);
+      longBeep();
+      showFinish();
+      return;
+    }
+    // Advance set
+    emomCurrentSet++;
+    remaining = emomSetSecs;
+    clearFlash();
+    setStartBeep();
+    ledSetNum(emomCurrentSet);
+    ledTimeNum(remaining);
+    ledGoFlash();      // green screen flash on new set
+    updateSetCounter(false);
+    updateDots();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  EMOM UI
+// ══════════════════════════════════════════════
+function updateSetCounter(immediate) {
+  const el = document.getElementById('set-counter');
+  el.textContent = `SET ${emomCurrentSet} / ${emomSets}`;
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 600);
+}
+
+function refreshProgressBar() {
+  if (mode !== 'emom') return;
+  // fraction of total work done
+  const done = (emomCurrentSet - 1) * emomSetSecs + (emomSetSecs - remaining);
+  const pct  = emomTotalSecs > 0 ? (done / emomTotalSecs) * 100 : 0;
+  document.getElementById('set-progress-bar').style.width = Math.min(100, pct) + '%';
+}
+
+function buildDots() {
+  const el    = document.getElementById('set-dots');
+  const count = Math.min(emomSets, 24);
+  el.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' cur' : '');
+    d.id = 'dot-' + i;
+    el.appendChild(d);
+  }
+}
+
+function updateDots() {
+  const count = Math.min(emomSets, 24);
+  for (let i = 0; i < count; i++) {
+    const d = document.getElementById('dot-' + i);
+    if (!d) continue;
+    d.className = 'dot';
+    if (i < emomCurrentSet - 1)      d.classList.add('done');
+    else if (i === emomCurrentSet - 1) d.classList.add('cur');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  EMOM LED BOARD HELPERS
+// ══════════════════════════════════════════════
+let goFlashTimer = null;
+
+function ledSetNum(setNum) {
+  // Pad to 2 digits so the ghost layer aligns perfectly
+  document.getElementById('emom-set-num').textContent = String(setNum).padStart(2, '0');
+}
+
+function ledTimeNum(secs) {
+  document.getElementById('emom-time-num').textContent = formatTime(Math.max(0, secs));
+}
+
+function ledSetWarning() {
+  document.getElementById('emom-board').classList.add('warning');
+}
+
+function ledClearWarning() {
+  document.getElementById('emom-board').classList.remove('warning');
+}
+
+// Green full-screen flash when a new set starts
+function ledGoFlash() {
+  const board = document.getElementById('emom-board');
+  board.classList.add('go-flash');
+  clearTimeout(goFlashTimer);
+  goFlashTimer = setTimeout(() => board.classList.remove('go-flash'), 280);
+}
+function triggerFlash() {
+  const o = document.getElementById('flash-overlay');
+  o.classList.add('flash');
+  clearTimeout(flashTimeout);
+  flashTimeout = setTimeout(() => o.classList.remove('flash'), 380);
+}
+function clearFlash() {
+  clearTimeout(flashTimeout);
+  document.getElementById('flash-overlay').classList.remove('flash');
+}
+
+// ══════════════════════════════════════════════
+//  CONTROLS
+// ══════════════════════════════════════════════
+function togglePause() {
+  paused = !paused;
+  document.getElementById('pause-btn').textContent = paused ? 'RESUME' : 'PAUSE';
+  const disp  = document.getElementById('timer-display');
+  const board = document.getElementById('emom-board');
+  const run   = document.getElementById('running');
+  if (paused) {
+    disp.classList.add('paused');
+    board.classList.add('paused');
+    run.classList.add('giant-paused');
+  } else {
+    disp.classList.remove('paused');
+    board.classList.remove('paused');
+    run.classList.remove('giant-paused');
+    if (mode === 'emom' && remaining <= 3 && remaining > 0) ledSetWarning();
+    else ledClearWarning();
+  }
+}
+
+function resetTimer() {
+  clearInterval(timerInterval); timerInterval = null;
+  clearFlash(); clearSplits();
+  lastSplitTimestamp = 0;
+  hideReport();
+  gcCancelLongPress();   // single call — was duplicated before
+  gcResetFrozen();
+  elapsed = 0; paused = false;
+  document.getElementById('pause-btn').textContent = 'PAUSE';
+  document.getElementById('timer-display').classList.remove('paused');
+  document.getElementById('running').classList.remove('giant-paused');
+  // Clear all visual states on giant-clock
+  const gc = document.getElementById('giant-clock');
+  if (gc) gc.classList.remove('warn', 'blink', 'frozen');
+
+  if (mode === 'fortime') {
+    document.getElementById('timer-display').className   = 'timer-display green';
+    document.getElementById('timer-display').textContent = '00:00';
+    document.getElementById('giant-time').textContent    = '00:00';
+    document.getElementById('giant-clock').classList.remove('warn','blink');
+    document.getElementById('giant-splits').innerHTML = '';
+  } else if (mode === 'amrap') {
+    remaining = targetSecs;
+    document.getElementById('timer-display').className   = 'timer-display yellow';
+    document.getElementById('timer-display').textContent = formatTime(remaining);
+    document.getElementById('giant-time').textContent    = formatTime(remaining);
+    document.getElementById('giant-clock').classList.remove('warn','blink');
+    document.getElementById('giant-splits').innerHTML = '';
+  } else {
+    emomCurrentSet = 1; remaining = emomSetSecs;
+    document.getElementById('timer-display').className   = 'timer-display cyan';
+    document.getElementById('timer-display').textContent = formatTime(remaining);
+    document.getElementById('emom-board').classList.remove('paused', 'warning');
+    ledSetNum(emomCurrentSet);
+    ledTimeNum(remaining);
+    ledGoFlash();
+    updateSetCounter(true); refreshProgressBar(); buildDots();
+    setStartBeep();
+  }
+  // Drift-corrected restart
+  let _tickOrigin = performance.now(); let _tickCount = 0;
+  timerInterval = setInterval(() => { _tickCount++; tick(); }, 1000);
+}
+
+// ══════════════════════════════════════════════
+//  FINISH
+// ══════════════════════════════════════════════
+function showFinish() {
+  // For Time → split report poster
+  if (mode === 'fortime') { showReport(); return; }
+
+  // AMRAP → also show report poster (total time + any splits recorded)
+  if (mode === 'amrap')   { showReport(); return; }
+
+  // EMOM → classic finish screen
+  releaseWakeLock(); clearFlash();
+  tryUnlockOrientation();
+  const ft   = document.getElementById('fin-title');
+  const ftime = document.getElementById('fin-time');
+  const fsub  = document.getElementById('fin-sub');
+  const fstat = document.getElementById('fin-stat');
+  ft.textContent = 'DONE!';
+  ft.style.color = 'var(--cyan)'; ft.style.textShadow = '0 0 36px rgba(0,255,255,.5)';
+  ftime.textContent = emomSets + ' SETS';
+  fsub.textContent  = `EMOM  ·  ${pad(emomEMin)}:${pad(emomESec)} / SET`;
+  fstat.textContent = `TOTAL TIME  ${formatTime(elapsed)}`;
+  clearSplits();
+  show('finish');
+}
+
+// ══════════════════════════════════════════════
+//  WAKE LOCK
+// ══════════════════════════════════════════════
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && timerInterval) requestWakeLock();
+});
+
+// ══════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+//  Space  → split (giant-mode) / pause (emom)
+//  Enter  → finish all modes
+//  Escape → home
+// ══════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  const isRunning = !document.getElementById('running').classList.contains('hidden');
+  const isCD      = !document.getElementById('countdown').classList.contains('hidden');
+  const isGiant   = document.getElementById('running').classList.contains('giant-mode');
+
+  if (isCD) { initAudio(); return; }
+  if (!isRunning) return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (isGiant) gcHandleTap(null);
+    else         togglePause();
+    return;
+  }
+
+  if (e.code === 'Enter') {
+    e.preventDefault();
+    gcCtrlFinish(null);   // works for all modes
+    return;
+  }
+
+  if (e.code === 'Escape') {
+    e.preventDefault();
+    gcCtrlHome(null);
+  }
+});
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+function formatTime(s) {
+  if (s < 0) s = 0;
+  return pad(Math.floor(s / 60)) + ':' + pad(s % 60);
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+
+// ══════════════════════════════════════════════
+//  ORIENTATION & LANDSCAPE LOGIC
+// ══════════════════════════════════════════════
+
+// ── Rotate hint ─────────────────────────────────────────────────
+// Shows a brief toast when user hits START in portrait orientation.
+let rotateHintTimer = null;
+
+function showRotateHint() {
+  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+  if (!isPortrait) return;                   // already landscape, skip
+  const el = document.getElementById('rotate-hint');
+  el.classList.add('show');
+  clearTimeout(rotateHintTimer);
+  rotateHintTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ── Screen Orientation Lock (best-effort) ───────────────────────
+// Works in Android Chrome PWA / fullscreen contexts.
+// Silently fails on iOS Safari and desktop — that's expected.
+async function tryLockLandscape() {
+  try {
+    if (screen.orientation && typeof screen.orientation.lock === 'function') {
+      await screen.orientation.lock('landscape');
+    }
+  } catch(e) {
+    // Not supported or not in a lockable context — ignore.
+  }
+}
+
+async function tryUnlockOrientation() {
+  try {
+    if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+      screen.orientation.unlock();
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+//  SPLIT TIME RECORDING  (For Time incremental)
+// ══════════════════════════════════════════════
+// splitsHistory stores objects: { roundTime, totalTime }
+// lastSplitTimestamp tracks where last split was, for delta calc.
+
+const splitsHistory  = [];
+let   lastSplitTimestamp = 0;
+let   splitPopupTimer    = null;
+let   splitFlashTimer    = null;
+
+function recordSplit(e) {
+  // Only For Time supports split recording in this implementation
+  if (mode !== 'fortime') return;
+  if (paused) return;
+
+  // Filter clicks that land on buttons or controls
+  if (e && (e.target.closest('button') || e.target.closest('.controls'))) return;
+
+  const currentTimestamp = elapsed;                          // current elapsed seconds
+  const roundTime        = currentTimestamp - lastSplitTimestamp;  // delta since last split
+  lastSplitTimestamp     = currentTimestamp;                 // update anchor
+
+  splitsHistory.push({ roundTime, totalTime: currentTimestamp });
+
+  // ── Visual feedback ─────────────────────────────────────────
+  // 1. Grey screen flash (shutter)
+  const sf = document.getElementById('split-flash');
+  sf.classList.add('flash');
+  clearTimeout(splitFlashTimer);
+  splitFlashTimer = setTimeout(() => sf.classList.remove('flash'), 160);
+
+  // 2. "+ MM:SS" popup under the number
+  const popup = document.getElementById('split-popup');
+  popup.textContent = `+ ${formatTime(roundTime)}`;
+  popup.classList.add('show');
+  clearTimeout(splitPopupTimer);
+  splitPopupTimer = setTimeout(() => popup.classList.remove('show'), 1400);
+
+  // 3. Update both sidebar (portrait) and split-log (landscape)
+  renderSplitSidebar();
+  renderSplitLogLandscape();
+}
+
+// Portrait sidebar — shows last 3 entries in R# | split | total format
+function renderSplitSidebar() {
+  const el   = document.getElementById('split-sidebar');
+  const last3 = splitsHistory.slice(-3);
+  el.innerHTML = '';
+  last3.forEach((s, i) => {
+    const rn  = splitsHistory.length - last3.length + i + 1;
+    const row = document.createElement('div');
+    row.className = 'sidebar-row';
+    row.innerHTML =
+      `<div class="s-round">R${rn}</div>` +
+      `<div class="s-split">${formatTime(s.roundTime)}</div>` +
+      `<div class="s-total">∑ ${formatTime(s.totalTime)}</div>`;
+    el.appendChild(row);
+  });
+}
+
+// Landscape split log — shows chips in the right-side panel
+function renderSplitLogLandscape() {
+  const log  = document.getElementById('split-log');
+  const s    = splitsHistory[splitsHistory.length - 1];
+  const rn   = splitsHistory.length;
+  const chip = document.createElement('div');
+  chip.className   = 'split-chip';
+  chip.textContent = `R${rn}  ${formatTime(s.roundTime)}`;
+  log.appendChild(chip);
+  while (log.children.length > 6) log.removeChild(log.firstChild);
+}
+
+function clearSplits() {
+  splitsHistory.length = 0;
+  lastSplitTimestamp   = 0;
+  document.getElementById('split-log').innerHTML     = '';
+  document.getElementById('split-sidebar').innerHTML = '';
+  document.getElementById('giant-splits').innerHTML  = '';
+  const popup = document.getElementById('split-popup');
+  popup.textContent = ''; popup.classList.remove('show');
+}
+
+// ══════════════════════════════════════════════
+//  MANUAL FINISH
+// ══════════════════════════════════════════════
+function manualFinish() {
+  // Route all modes: For Time & AMRAP → report poster; EMOM → finish screen
+  if (mode === 'emom') {
+    clearInterval(timerInterval); timerInterval = null;
+    longBeep(); showFinish();
+  } else {
+    // For Time & AMRAP — same as long-press finish
+    gcFireFinish();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  GC-CONTROLS BUTTON HANDLERS
+//  Each handler:
+//  1. Stops event propagation so the click never
+//     reaches #giant-clock (prevents split recording)
+//  2. Calls the appropriate action
+// ══════════════════════════════════════════════
+function gcCtrlHome(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  gcCancelLongPress();
+  clearInterval(timerInterval); timerInterval = null;
+  goHome();
+}
+
+function gcCtrlReset(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  // #region agent log: gcCtrlReset state before reset
+  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H1',location:'cf-timer-preview.html:gcCtrlReset',message:'gcCtrlReset() called',data:{mode, gcFrozen, timerIntervalIsNull:timerInterval===null, gcFinishTimerIsSet:gcFinishTimer!==null, elapsed, remaining, paused, splitsHistoryLen:splitsHistory.length},timestamp:Date.now()} )}).catch(()=>{});
+  // #endregion
+  gcCancelLongPress();
+  resetTimer();
+}
+
+function gcCtrlFinish(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  gcCancelLongPress();
+  if (mode === 'emom') {
+    clearInterval(timerInterval); timerInterval = null;
+    longBeep(); showFinish();
+  } else {
+    gcFireFinish();
+  }
+}
+
+// Mobile touch-active class for gc-buttons (tactile feedback)
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.gc-btn').forEach(btn => {
+    btn.addEventListener('touchstart', () => btn.classList.add('touched'),   { passive: true });
+    btn.addEventListener('touchend',   () => btn.classList.remove('touched'), { passive: true });
+    btn.addEventListener('touchcancel',() => btn.classList.remove('touched'), { passive: true });
+  });
+});
+
+// ══════════════════════════════════════════════
+//  REPORT MODAL
+// ══════════════════════════════════════════════
+function showReport() {
+  // #region agent log: showReport entry
+  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H1',location:'cf-timer-preview.html:showReport',message:'showReport() called',data:{mode, gcFrozen, elapsed, remaining, paused, splitsHistoryLen:splitsHistory.length},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  // #region agent log: showReport context check
+  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H3',location:'cf-timer-preview.html:showReport',message:'showReport() context for hypothesis H3',data:{mode, gcFrozen, paused, elapsed, remaining, splitsHistoryLen:splitsHistory.length},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  releaseWakeLock();
+  clearFlash();
+  gcCancelLongPress();
+  tryUnlockOrientation();
+
+  // BUG FIX: hide the stealth control bar so it doesn't float over the poster
+  const gcCtrl = document.getElementById('gc-controls');
+  if (gcCtrl) gcCtrl.classList.remove('visible');
+
+  // Total time: For Time = elapsed; AMRAP = time cap
+  const totalTime = mode === 'amrap' ? targetSecs : elapsed;
+
+  // ── Header ──────────────────────────────────────────────────────
+  document.getElementById('rpt-total').textContent = formatTime(totalTime);
+  document.getElementById('rpt-eyebrow').textContent =
+    mode === 'fortime' ? 'TOTAL TIME' : mode === 'amrap' ? 'TIME CAP' : 'TOTAL TIME';
+  document.getElementById('rpt-sub-label').textContent =
+    mode === 'fortime' ? 'FOR TIME' :
+    mode === 'amrap'   ? 'AMRAP' :
+                         `EMOM · ${pad(emomEMin)}:${pad(emomESec)} / SET`;
+
+  // Round count badge (top-right)
+  const roundsEl = document.getElementById('rpt-rounds-value');
+  if (roundsEl) roundsEl.textContent = splitsHistory.length > 0 ? splitsHistory.length : '—';
+
+  // ── Pace list ───────────────────────────────────────────────────
+  const splitsEl = document.getElementById('rpt-splits');
+  const noSplit  = document.getElementById('rpt-no-splits');
+  splitsEl.innerHTML = '';
+  splitsEl.classList.remove('compact', 'xcompact');
+
+  if (splitsHistory.length === 0) {
+    splitsEl.classList.add('hidden');
+    noSplit.classList.remove('hidden');
+  } else {
+    splitsEl.classList.remove('hidden');
+    noSplit.classList.add('hidden');
+
+    const minRound = Math.min(...splitsHistory.map(s => s.roundTime));
+    const count    = splitsHistory.length;
+    // BUG FIX: extended thresholds handle >20 rounds without layout break
+    // ≤10 rows: full size; 11–18: compact; 19+: xcompact (mid-label hidden)
+    if (count > 18)     splitsEl.classList.add('xcompact');
+    else if (count > 10) splitsEl.classList.add('compact');
+
+    splitsHistory.forEach((s, i) => {
+      const isFastest = s.roundTime === minRound;
+      const row = document.createElement('div');
+      row.className = 'rpt-row' + (isFastest ? ' fastest' : '');
+
+      // ── Three-column row: [RD XX] · [descriptor] · [MM:SS] ──────
+      // .rpt-rd and .rpt-split-time share --row-size → identical weight.
+      // .rpt-mid-label uses a separate small size → never competes.
+      const descriptor = isFastest ? '★ FASTEST' : 'ROUND COMPLETE';
+      row.innerHTML =
+        `<span class="rpt-rd">RD ${String(i + 1).padStart(2, '0')}</span>` +
+        `<span class="rpt-mid-label">${descriptor}</span>` +
+        `<span class="rpt-split-time">${formatTime(s.roundTime)}</span>`;
+
+      splitsEl.appendChild(row);
+    });
+  }
+
+  document.getElementById('report-modal').classList.remove('hidden');
+  document.getElementById('running').classList.add('hidden');
+}
+
+function hideReport() {
+  document.getElementById('report-modal').classList.add('hidden');
+  // Restore stealth controls if still on running screen
+  const running = document.getElementById('running');
+  if (running && !running.classList.contains('hidden')) {
+    const gcCtrl = document.getElementById('gc-controls');
+    if (gcCtrl) gcCtrl.classList.add('visible');
+  }
+}
+
+function reportHome() {
+  document.getElementById('report-modal').classList.add('hidden');
+  const gcCtrl = document.getElementById('gc-controls');
+  if (gcCtrl) gcCtrl.classList.remove('visible');
+  clearSplits();
+  goHome();
+}
+
+function reportRestart() {
+  document.getElementById('report-modal').classList.add('hidden');
+  const gcCtrl = document.getElementById('gc-controls');
+  if (gcCtrl) gcCtrl.classList.remove('visible');
+  clearSplits();           // BUG FIX: wipe previous splits before new session
+  startCountdown();
+}
+
+// ── Orientation change listener ──────────────────────────────────
+// When rotating INTO landscape during a run: fade-in the timer cleanly.
+// When rotating back to portrait: restore normal layout.
+const orientationMQ = window.matchMedia('(orientation: landscape)');
+
+function handleOrientationChange(e) {
+  const running = !document.getElementById('running').classList.contains('hidden');
+  if (!running) return;
+
+  if (e.matches) {
+    // Just went landscape — timer is already styled by CSS, nothing extra needed.
+    // The CSS transition on font-size handles the smooth scale-up.
+  } else {
+    // Went back to portrait — clear split log so it doesn't ghost
+    clearSplits();
+  }
+}
+
+// Modern API
+if (orientationMQ.addEventListener) {
+  orientationMQ.addEventListener('change', handleOrientationChange);
+} else {
+  // Legacy Safari fallback
+  orientationMQ.addListener(handleOrientationChange);
+}
+
+// ── Portrait tap-to-split — LEGACY (kept for non-giant-mode safety) ─
+// Giant clock handles its own tap events above.
+// This listener fires for the EMOM mode or any state where giant-mode
+// is not active, and skips if we're in giant-mode.
+document.getElementById('running').addEventListener('click', function(e) {
+  if (document.getElementById('running').classList.contains('giant-mode')) return;
+  const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+  if (isLandscape) return;
+  if (mode !== 'fortime') return;
+  if (paused) return;
+  if (e.target.closest('button') || e.target.closest('.controls')) return;
+  recordSplit(e);
+});
+
+// ══════════════════════════════════════════════
+//  GIANT CLOCK — GESTURE HANDLING  (v3 — audited)
+//
+//  STATE MACHINE:
+//  RUNNING → tap ≤ TAP_MAX ms      → split recorded + flash
+//  RUNNING → hold ≥ LP_DURATION    → FROZEN + report shown
+//  FROZEN  → any gesture           → ignored
+//
+//  FIXES APPLIED:
+//  · LP_DURATION = 1500ms (was 2000; 1.5s feels intentional, not accidental)
+//  · gcStartLongPress guards against double-start (multi-touch race)
+//  · touchstart uses passive:false so e.preventDefault() works (blocks
+//    iOS context menu, text-selection callout, double-tap zoom)
+//  · contextmenu + selectstart events suppressed on #giant-clock
+//  · gcHandleTap accepts null (called from keyboard Space shortcut)
+//  · gcCancelLongPress nulls lpRafId (was missing, caused RAF leak)
+//  · mouse event guards e.button !== 0 (ignore right-click)
+// ══════════════════════════════════════════════
+
+const LP_DURATION = 1500;   // ms — hold to finish (1.5 s)
+const TAP_MAX     = 220;    // ms — ≤ this = deliberate tap
+const TAP_MOVE_PX = 12;     // px — drift cancels long-press
+
+let lpTimer  = null;
+let lpStart  = 0;
+let lpRafId  = null;
+let gcFlashT = null;
+let gcFrozen = false;
+let lpTouchX = 0;
+let lpTouchY = 0;
+
+// ── Fit ring around digit cluster ───────────────────────────────
+function gcResizeRing() {
+  const wrap = document.getElementById('giant-clock-wrap');
+  const ring = document.getElementById('lp-ring');
+  if (!wrap || !ring) return;
+  const d = Math.max(wrap.offsetWidth, wrap.offsetHeight) * 1.08;
+  ring.style.width  = d + 'px';
+  ring.style.height = d + 'px';
+}
+window.addEventListener('resize', gcResizeRing, { passive: true });
+try { screen.orientation.addEventListener('change', gcResizeRing); } catch(_) {}
+
+// ── Cancel long-press ────────────────────────────────────────────
+function gcCancelLongPress() {
+  clearTimeout(lpTimer);
+  cancelAnimationFrame(lpRafId);
+  lpTimer = null; lpStart = 0; lpRafId = null;
+  const ring = document.getElementById('lp-ring');
+  if (ring) { ring.classList.remove('active'); ring.style.setProperty('--lp-deg', '0deg'); }
+}
+
+// ── Begin long-press ─────────────────────────────────────────────
+function gcStartLongPress() {
+  if (gcFrozen) return;
+  if (paused) return;
+  if (lpTimer) return;       // FIX: guard double-start (multi-touch)
+
+  lpStart = performance.now();
+  gcResizeRing();
+  const ring = document.getElementById('lp-ring');
+  if (ring) ring.classList.add('active');
+
+  (function animateRing() {
+    if (!lpStart) return;
+    const pct = Math.min((performance.now() - lpStart) / LP_DURATION, 1);
+    if (ring) ring.style.setProperty('--lp-deg', (pct * 360).toFixed(1) + 'deg');
+    if (pct < 1) lpRafId = requestAnimationFrame(animateRing);
+  })();
+
+  lpTimer = setTimeout(() => {
+    gcCancelLongPress();
+    gcFireFinish();
+  }, LP_DURATION);
+}
+
+// ── Stop + freeze + open report ──────────────────────────────────
+let gcFinishTimer = null;   // BUG FIX: store so goHome() can cancel it
+
+function gcFireFinish() {
+  if (gcFrozen) return;
+  gcFrozen = true;
+  clearInterval(timerInterval);
+  longBeep();
+  const gc = document.getElementById('giant-clock');
+  if (gc) { gc.classList.add('frozen'); gc.classList.remove('warn','blink'); }
+  const hint = document.getElementById('giant-hint');
+  if (hint) hint.textContent = 'LOCKED  ·  HOME TO EXIT';
+  clearTimeout(gcFinishTimer);
+  gcFinishTimer = setTimeout(showReport, 340);
+  // #region agent log: gcFinishTimer scheduled showReport
+  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H1',location:'cf-timer-preview.html:gcFireFinish',message:'gcFinishTimer scheduled showReport',data:{mode, elapsed, remaining, paused, timerIntervalIsNull:timerInterval===null, gcFinishTimerIsSet:true, delayMs:340},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+}
+
+// ── Single tap: split (e may be null from keyboard) ──────────────
+function gcHandleTap(e) {
+  if (gcFrozen) return;
+  if (paused) return;
+  if (e && e.target && e.target.closest && e.target.closest('#lp-ring')) return;
+
+  const gf = document.getElementById('giant-flash');
+  if (gf) {
+    gf.classList.add('pop');
+    clearTimeout(gcFlashT);
+    gcFlashT = setTimeout(() => gf.classList.remove('pop'), 130);
+  }
+
+  if (mode === 'fortime' || mode === 'amrap') {
+    const ts        = mode === 'fortime' ? elapsed : (targetSecs - remaining);
+    const roundTime = ts - lastSplitTimestamp;
+    lastSplitTimestamp = ts;
+    splitsHistory.push({ roundTime, totalTime: ts });
+    gcRenderChips();
+  }
+}
+
+function gcRenderChips() {
+  const el = document.getElementById('giant-splits');
+  if (!el) return;
+  const last4 = splitsHistory.slice(-4);
+  el.innerHTML = '';
+  last4.forEach((s, i) => {
+    const rn   = splitsHistory.length - last4.length + i + 1;
+    const chip = document.createElement('div');
+    chip.className   = 'gc-chip';
+    chip.textContent = `R${String(rn).padStart(2,'0')}  +${formatTime(s.roundTime)}`;
+    el.appendChild(chip);
+  });
+}
+
+// ── Reset frozen state ───────────────────────────────────────────
+function gcResetFrozen() {
+  gcFrozen = false;
+  const gc = document.getElementById('giant-clock');
+  if (gc) gc.classList.remove('frozen');
+  const hint = document.getElementById('giant-hint');
+  if (hint) hint.textContent = 'TAP · SPLIT     HOLD 1.5S · FINISH';
+}
+
+// ── Attach events ────────────────────────────────────────────────
+(function setupGiantClock() {
+  const gc = document.getElementById('giant-clock');
+  if (!gc) return;
+
+  // Suppress iOS/desktop context menu + text selection during long-press
+  gc.addEventListener('contextmenu',  e => e.preventDefault());
+  gc.addEventListener('selectstart',  e => e.preventDefault());
+
+  // ── Touch (passive:false required for preventDefault) ──
+  gc.addEventListener('touchstart', e => {
+    if (e.target.closest('button')) return;
+    e.preventDefault();                        // blocks context menu + double-tap zoom
+    if (e.touches.length > 1) { gcCancelLongPress(); return; }
+    lpTouchX = e.touches[0].clientX;
+    lpTouchY = e.touches[0].clientY;
+    gcStartLongPress();
+  }, { passive: false });
+
+  gc.addEventListener('touchmove', e => {
+    if (!lpStart) return;
+    const dx = e.touches[0].clientX - lpTouchX;
+    const dy = e.touches[0].clientY - lpTouchY;
+    if (Math.sqrt(dx*dx + dy*dy) > TAP_MOVE_PX) gcCancelLongPress();
+  }, { passive: true });
+
+  gc.addEventListener('touchend', e => {
+    if (!lpStart) return;
+    if (gcFrozen) { gcCancelLongPress(); return; }  // BUG FIX: frozen → never tap
+    const held = performance.now() - lpStart;  // read BEFORE cancel zeroes lpStart
+    gcCancelLongPress();
+    if (held >= 30 && held <= TAP_MAX) gcHandleTap(e);
+  }, { passive: true });
+
+  gc.addEventListener('touchcancel', () => gcCancelLongPress(), { passive: true });
+
+  // ── Mouse ──
+  gc.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button')) return;
+    lpTouchX = e.clientX; lpTouchY = e.clientY;
+    gcStartLongPress();
+  });
+  gc.addEventListener('mousemove', e => {
+    if (!lpStart) return;
+    const dx = e.clientX - lpTouchX, dy = e.clientY - lpTouchY;
+    if (Math.sqrt(dx*dx + dy*dy) > TAP_MOVE_PX) gcCancelLongPress();
+  });
+  gc.addEventListener('mouseup', e => {
+    if (!lpStart) return;
+    if (gcFrozen) { gcCancelLongPress(); return; }  // BUG FIX: frozen → never tap
+    const held = performance.now() - lpStart;
+    gcCancelLongPress();
+    if (held >= 30 && held <= TAP_MAX) gcHandleTap(e);
+  });
+  gc.addEventListener('mouseleave', () => gcCancelLongPress());
+})();
+
+// ── INIT ──
+updateStdDisplay();
+updateEmomDisplay();
+</script>
+</body>
+</html>
