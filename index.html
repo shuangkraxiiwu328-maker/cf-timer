@@ -3134,7 +3134,7 @@ function gcHandleTap(e) {
   }
 
   if (mode === 'fortime' || mode === 'amrap') {
-    const ts        = mode === 'fortime' ? elapsed : (targetSecs - remaining);
+    const ts        = elapsed;
     const roundTime = ts - lastSplitTimestamp;
     lastSplitTimestamp = ts;
     splitsHistory.push({ roundTime, totalTime: ts });
