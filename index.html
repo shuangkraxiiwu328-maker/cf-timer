@@ -2314,7 +2314,7 @@ async function startCountdown() {
     el.classList.remove('cd-beat');
     void el.offsetWidth;
     el.classList.add('cd-beat');
-    if (cdVal <= 3) cdBeep();
+    if (cdVal <= 3) warnBeep(cdVal); else cdBeep();
   }, 1000);
 }
 
