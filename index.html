@@ -1417,6 +1417,42 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
 }
 
 /* ────────────────────────────────────────────────────────────────
+   FULLSCREEN TOGGLE BUTTON
+   · Sits at bottom-right, above every overlay (z-index 10001)
+   · Default: 10% opacity (stealth)
+   · Hover/touch: 100% opacity + neon-cyan glow
+   ──────────────────────────────────────────────────────────────── */
+#fs-btn {
+  position: fixed;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  right:  max(14px, env(safe-area-inset-right));
+  z-index: 10001;          /* above report-modal (10000) + scanlines (9999) */
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none;
+  cursor: pointer; outline: none;
+  padding: 0;
+  opacity: 0.10;
+  color: var(--cyan);
+  transition: opacity 0.2s var(--ease-spring),
+              filter  0.2s var(--ease-spring),
+              transform 0.15s var(--ease-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+#fs-btn:hover,
+#fs-btn:focus-visible,
+#fs-btn.touched {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px var(--cyan)) drop-shadow(0 0 14px rgba(0,229,255,.45));
+}
+#fs-btn:active { transform: scale(0.88); opacity: 1; }
+#fs-btn svg {
+  width: 22px; height: 22px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ────────────────────────────────────────────────────────────────
    MISC: Scanlines, Rotate hint
    ──────────────────────────────────────────────────────────────── */
 body::after {
@@ -1888,6 +1924,26 @@ body::after {
 
 <!-- Rotate hint -->
 <div id="rotate-hint">⟳ 建议旋转手机以获得最佳视野</div>
+
+<!-- ══════ FULLSCREEN TOGGLE ══════
+     Lives at the very top of the stacking context (z-index 10001).
+     Icon swaps: expand ↔ contract depending on current FS state.   -->
+<button id="fs-btn" aria-label="Toggle Full Screen" title="Full Screen (F)">
+  <!-- EXPAND icon (shown when NOT in fullscreen) -->
+  <svg id="fs-icon-expand" viewBox="0 0 24 24" aria-hidden="true">
+    <polyline points="15 3 21 3 21 9"/>
+    <polyline points="9 21 3 21 3 15"/>
+    <line x1="21" y1="3" x2="14" y2="10"/>
+    <line x1="3"  y1="21" x2="10" y2="14"/>
+  </svg>
+  <!-- CONTRACT icon (shown when IN fullscreen) -->
+  <svg id="fs-icon-contract" viewBox="0 0 24 24" aria-hidden="true" style="display:none;">
+    <polyline points="4 14 10 14 10 20"/>
+    <polyline points="20 10 14 10 14 4"/>
+    <line x1="10" y1="14" x2="3"  y2="21"/>
+    <line x1="21" y1="3"  x2="14" y2="10"/>
+  </svg>
+</button>
 
 <script>
 // ══════════════════════════════════════════════
@@ -2745,6 +2801,17 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// 'F' key → toggle fullscreen (works on any screen, no modifier needed)
+document.addEventListener('keydown', e => {
+  if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    // Skip if focus is inside a text input (unlikely here, but safe)
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    e.preventDefault();
+    toggleFullscreen();
+  }
+});
+
 // ══════════════════════════════════════════════
 //  UTILS
 // ══════════════════════════════════════════════
@@ -3276,6 +3343,73 @@ function gcResetFrozen() {
 // ── INIT ──
 updateStdDisplay();
 updateEmomDisplay();
+
+// ══════════════════════════════════════════════
+//  FULL-SCREEN ENGINE
+//  Cross-browser: Chrome / Edge / Firefox / Safari Mac
+//  iOS Safari note: arbitrary-element FS is blocked by the OS;
+//  the button still works as a best-effort and the PWA manifest
+//  "display: standalone" provides the closest equivalent there.
+// ══════════════════════════════════════════════
+
+const fsBtn           = document.getElementById('fs-btn');
+const fsIconExpand    = document.getElementById('fs-icon-expand');
+const fsIconContract  = document.getElementById('fs-icon-contract');
+
+function isFullscreen() {
+  return !!(
+    document.fullscreenElement        ||
+    document.webkitFullscreenElement  ||
+    document.mozFullScreenElement     ||
+    document.msFullscreenElement
+  );
+}
+
+function requestFS(el) {
+  if      (el.requestFullscreen)       return el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+  else if (el.mozRequestFullScreen)    return el.mozRequestFullScreen();
+  else if (el.msRequestFullscreen)     return el.msRequestFullscreen();
+}
+
+function exitFS() {
+  if      (document.exitFullscreen)       return document.exitFullscreen();
+  else if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+  else if (document.mozCancelFullScreen)  return document.mozCancelFullScreen();
+  else if (document.msExitFullscreen)     return document.msExitFullscreen();
+}
+
+function toggleFullscreen() {
+  try {
+    if (isFullscreen()) {
+      const p = exitFS();
+      // exitFullscreen returns a Promise in modern browsers — swallow rejections
+      if (p && typeof p.then === 'function') p.catch(() => {});
+    } else {
+      const p = requestFS(document.documentElement);
+      // requestFullscreen returns undefined on iOS Safari (API absent) — guard before .catch()
+      if (p && typeof p.then === 'function') p.catch(() => {});
+    }
+  } catch (_) {
+    // FS API absent or sandboxed iframe — silently ignore
+  }
+}
+
+function syncFsIcon() {
+  const inFS = isFullscreen();
+  fsIconExpand.style.display   = inFS ? 'none'  : '';
+  fsIconContract.style.display = inFS ? ''      : 'none';
+}
+
+// Update icon whenever FS state changes (including browser's own Esc key)
+['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
+  .forEach(ev => document.addEventListener(ev, syncFsIcon));
+
+// Touch feedback for mobile (mirrors gc-btn pattern)
+fsBtn.addEventListener('touchstart', () => fsBtn.classList.add('touched'),   { passive: true });
+fsBtn.addEventListener('touchend',   () => fsBtn.classList.remove('touched'), { passive: true });
+fsBtn.addEventListener('click', toggleFullscreen);
+
 </script>
 </body>
 </html>
