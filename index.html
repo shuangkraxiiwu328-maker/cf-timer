@@ -561,6 +561,54 @@ html, body {
   .em-chev svg { width: 12px; height: 12px; }
   .s-accent-line { margin-bottom: 10px; }
 }
+/* ── Ghost Input — Invisible numeric keypad trigger ──────────────
+   Positioned off-screen so it NEVER overlaps any visible UI.
+   JS calls .focus() when the user taps the big digit areas.
+   font-size ≥ 16px is NON-NEGOTIABLE — iOS Safari auto-zooms any
+   focused input whose font-size < 16px, breaking the layout.
+   type="tel" chosen over type="number" so .value stays a raw
+   digit string (no leading-zero stripping, no decimal/minus key). */
+.ghost-input {
+  position: fixed;
+  top: -300px; left: 0;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;     /* never intercepts accidental taps    */
+  font-size: 16px;          /* MUST be ≥ 16px — iOS zoom fix       */
+  border: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+/* Visual feedback: digit area glows while the ghost has focus */
+.sp-val.kbd-active   { color: var(--yellow); transition: color .15s; cursor: text; }
+.em-digit.kbd-active { color: var(--cyan);   transition: color .15s; cursor: text; }
+
+/* Tap-zone hint on desktop */
+.sp-val    { cursor: pointer; }
+.em-digit  { cursor: pointer; }
+
+/* Settings screen — becomes scrollable when keyboard is open.
+   This prevents the Start button from being permanently hidden
+   behind the keyboard (visualViewport shrinks ~40% on mobile). */
+#settings.kbd-open {
+  justify-content: flex-start;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-bottom: 24px;
+}
+
+/* Minimum 48 px touch target on ▲▼ spinner buttons */
+.sp-btn { min-height: 48px; }
+
+/* Minimum 64 px touch target on Start (taped-finger UX) */
+.start-btn { min-height: 64px; }
+
 #countdown { background: var(--bg); cursor: pointer; }
 
 .cd-num {
@@ -1720,6 +1768,14 @@ body::after {
 
 <!-- ══════ SETTINGS ══════ -->
 <div class="screen hidden" id="settings">
+  <!-- Ghost inputs: focused programmatically to trigger the native
+       numeric keypad. type="tel" → clean 10-key grid on iOS+Android.
+       font-size: 16px (in .ghost-input CSS) prevents iOS auto-zoom.
+       pointer-events: none → never intercepts accidental taps.       -->
+  <input type="tel" id="std-ghost"       class="ghost-input" inputmode="numeric" pattern="\d*" autocomplete="off" />
+  <input type="tel" id="emom-time-ghost" class="ghost-input" inputmode="numeric" pattern="\d*" autocomplete="off" />
+  <input type="tel" id="emom-sets-ghost" class="ghost-input" inputmode="numeric" pattern="\d*" autocomplete="off" />
+
   <button class="back-btn" onclick="goHome()">←</button>
   <div class="s-header green" id="s-title">FOR TIME</div>
   <div class="s-sub" id="s-sub">SET TARGET TIME</div>
@@ -1730,17 +1786,18 @@ body::after {
     <div class="spinner-box">
       <div class="sp-col">
         <button class="sp-btn" onclick="spin('min',1)">▲</button>
-        <div class="sp-val" id="spin-min">20</div>
+        <!-- onclick → ghost.focus() → native keypad slides up -->
+        <div class="sp-val" id="spin-min" onclick="stdGhostFocus()">20</div>
         <button class="sp-btn" onclick="spin('min',-1)">▼</button>
       </div>
       <div class="sp-colon">:</div>
       <div class="sp-col">
         <button class="sp-btn" onclick="spin('sec',1)">▲</button>
-        <div class="sp-val" id="spin-sec">00</div>
+        <div class="sp-val" id="spin-sec" onclick="stdGhostFocus()">00</div>
         <button class="sp-btn" onclick="spin('sec',-1)">▼</button>
       </div>
     </div>
-    <div class="field-hint">MM : SS</div>
+    <div class="field-hint">MM : SS  ·  TAP DIGITS TO TYPE</div>
   </div>
 
   <!-- EMOM Monolithic Panel -->
@@ -1755,9 +1812,9 @@ body::after {
       <div class="em-row">
         <span class="em-label">Total<br>Sets</span>
 
-        <!-- Centre: single large digit -->
+        <!-- Centre: single large digit — tap to type -->
         <div class="em-value">
-          <span class="em-digit" id="spin-sets">10</span>
+          <span class="em-digit" id="spin-sets" onclick="emomSetsGhostFocus()">10</span>
         </div>
 
         <!-- Right: chevrons + unit -->
@@ -1793,7 +1850,8 @@ body::after {
                 <svg viewBox="0 0 14 14"><polyline points="2,4 7,10 12,4"/></svg>
               </button>
             </div>
-            <span class="em-digit" id="spin-emin">03</span>
+            <!-- tap to type MM:SS together -->
+            <span class="em-digit" id="spin-emin" onclick="emomTimeGhostFocus()">03</span>
             <span class="em-unit">MM</span>
           </div>
 
@@ -1810,7 +1868,7 @@ body::after {
                 <svg viewBox="0 0 14 14"><polyline points="2,4 7,10 12,4"/></svg>
               </button>
             </div>
-            <span class="em-digit" id="spin-esec">00</span>
+            <span class="em-digit" id="spin-esec" onclick="emomTimeGhostFocus()">00</span>
             <span class="em-unit">SS</span>
           </div>
         </div>
@@ -2147,6 +2205,163 @@ function attachSpinner(id, unit) {
 ['spin-min','spin-sec','spin-sets','spin-emin','spin-esec'].forEach((id, i) => {
   attachSpinner(id, ['min','sec','sets','emin','esec'][i]);
 });
+
+// ══════════════════════════════════════════════════════════════════
+//  INVISIBLE INPUT — Native numeric keypad trigger
+//
+//  Strategy: three off-screen ghost <input type="tel"> elements are
+//  focused programmatically when the user taps the big digit areas.
+//  The native OS keypad slides up; as the user types, raw digits are
+//  parsed into MM:SS and the display updates in real-time.
+//
+//  Parsing rules (parseDigitsMmSs):
+//    "2"    → 02:00   (1 digit  → minutes only)
+//    "20"   → 20:00   (2 digits → minutes only)
+//    "205"  → 02:05   (3 digits → 1 mm + 2 ss)
+//    "0530" → 05:30   (4 digits → 2 mm + 2 ss)
+//    Seconds ≥ 60 are clamped to 59; minutes clamped to 99.
+// ══════════════════════════════════════════════════════════════════
+
+function parseDigitsMmSs(raw) {
+  const d = raw.replace(/\D/g, '').slice(-4);   // strip non-digits, max 4
+  if (!d) return null;
+  let mm, ss;
+  if (d.length <= 2) {
+    mm = parseInt(d, 10); ss = 0;
+  } else {
+    mm = parseInt(d.slice(0, d.length - 2), 10);
+    ss = parseInt(d.slice(-2), 10);
+    if (ss >= 60) ss = 59;
+  }
+  return { mm: Math.min(99, mm), ss: Math.min(59, ss) };
+}
+
+// ── Keyboard-open / close layout management ───────────────────────
+// When the OS keyboard opens the visual viewport shrinks. Switching
+// #settings to flex-start + overflow-y:auto lets the user scroll
+// to the Start button. visualViewport.resize fires on both iOS and
+// Android (Chrome 61+, Safari 13+) before/after keyboard animation.
+function _onKbdOpen() {
+  const s = document.getElementById('settings');
+  s.classList.add('kbd-open');
+  // Wait for keyboard animation to finish (~350 ms), then scroll
+  // the Start button to the bottom edge of the visible area.
+  setTimeout(() => {
+    const btn = document.getElementById('start-btn');
+    if (btn) btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, 380);
+}
+function _onKbdClose() {
+  document.getElementById('settings').classList.remove('kbd-open');
+}
+
+// ── STD ghost (For Time / AMRAP  MM:SS) ──────────────────────────
+function stdGhostFocus() {
+  const g = document.getElementById('std-ghost');
+  g.value = '';            // Bug-fix #3: always clear before focus
+  g.focus();
+}
+
+(function _initStdGhost() {
+  const g = document.getElementById('std-ghost');
+  if (!g) return;
+
+  g.addEventListener('focus', () => {
+    document.getElementById('spin-min').classList.add('kbd-active');
+    document.getElementById('spin-sec').classList.add('kbd-active');
+    _onKbdOpen();
+  });
+
+  g.addEventListener('blur', () => {
+    document.getElementById('spin-min').classList.remove('kbd-active');
+    document.getElementById('spin-sec').classList.remove('kbd-active');
+    // Commit whatever was typed (user may dismiss without pressing Enter)
+    const p = parseDigitsMmSs(g.value);
+    if (p) { spinMin = p.mm; spinSec = p.ss; updateStdDisplay(); }
+    g.value = '';
+    _onKbdClose();
+  });
+
+  g.addEventListener('input', () => {
+    // Cap at 4 digits; take the LAST 4 so the display follows the
+    // most-recently-typed digit (right-justified entry, like a register).
+    if (g.value.length > 4) g.value = g.value.slice(-4);
+    const p = parseDigitsMmSs(g.value);
+    if (p) { spinMin = p.mm; spinSec = p.ss; updateStdDisplay(); }
+  });
+
+  // "Done" / Enter on hardware or software keyboard dismisses it
+  g.addEventListener('keydown', e => { if (e.key === 'Enter') g.blur(); });
+})();
+
+// ── EMOM time ghost (MM:SS per set) ──────────────────────────────
+function emomTimeGhostFocus() {
+  const g = document.getElementById('emom-time-ghost');
+  g.value = '';
+  g.focus();
+}
+
+(function _initEmomTimeGhost() {
+  const g = document.getElementById('emom-time-ghost');
+  if (!g) return;
+
+  g.addEventListener('focus', () => {
+    document.getElementById('spin-emin').classList.add('kbd-active');
+    document.getElementById('spin-esec').classList.add('kbd-active');
+    _onKbdOpen();
+  });
+
+  g.addEventListener('blur', () => {
+    document.getElementById('spin-emin').classList.remove('kbd-active');
+    document.getElementById('spin-esec').classList.remove('kbd-active');
+    const p = parseDigitsMmSs(g.value);
+    if (p) { emomEMin = p.mm; emomESec = p.ss; updateEmomDisplay(); }
+    g.value = '';
+    _onKbdClose();
+  });
+
+  g.addEventListener('input', () => {
+    if (g.value.length > 4) g.value = g.value.slice(-4);
+    const p = parseDigitsMmSs(g.value);
+    if (p) { emomEMin = p.mm; emomESec = p.ss; updateEmomDisplay(); }
+  });
+
+  g.addEventListener('keydown', e => { if (e.key === 'Enter') g.blur(); });
+})();
+
+// ── EMOM sets ghost (integer 1–99) ────────────────────────────────
+function emomSetsGhostFocus() {
+  const g = document.getElementById('emom-sets-ghost');
+  g.value = '';
+  g.focus();
+}
+
+(function _initEmomSetsGhost() {
+  const g = document.getElementById('emom-sets-ghost');
+  if (!g) return;
+
+  g.addEventListener('focus', () => {
+    document.getElementById('spin-sets').classList.add('kbd-active');
+    _onKbdOpen();
+  });
+
+  g.addEventListener('blur', () => {
+    document.getElementById('spin-sets').classList.remove('kbd-active');
+    const raw = g.value.replace(/\D/g, '').slice(-2);
+    const v = parseInt(raw, 10);
+    if (!isNaN(v) && v >= 1) { emomSets = Math.min(99, v); updateEmomDisplay(); }
+    g.value = '';
+    _onKbdClose();
+  });
+
+  g.addEventListener('input', () => {
+    const raw = g.value.replace(/\D/g, '').slice(-2);
+    const v = parseInt(raw, 10);
+    if (!isNaN(v) && v >= 1) { emomSets = Math.min(99, v); updateEmomDisplay(); }
+  });
+
+  g.addEventListener('keydown', e => { if (e.key === 'Enter') g.blur(); });
+})();
 
 // ══════════════════════════════════════════════════════════════════
 //  AUDIO ENGINE  —  PENETRATION-GRADE · iOS-SAFE · DEBUGGABLE
