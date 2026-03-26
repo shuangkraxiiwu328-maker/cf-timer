@@ -2474,7 +2474,8 @@ function startCountdown() {
     el.classList.remove('cd-beat');
     void el.offsetWidth;
     el.classList.add('cd-beat');
-    if (cdVal <= 3) warnBeep(cdVal); else cdBeep();
+    // BUG FIX: digits 10-4 are silent (numbers only); only 3-2-1 play warnBeep
+    if (cdVal <= 3) warnBeep(cdVal);
   }, 1000);
 }
 
@@ -2582,6 +2583,15 @@ function tick() {
   if (mode === 'fortime') {
     document.getElementById('timer-display').textContent = formatTime(elapsed);
     document.getElementById('giant-time').textContent    = formatTime(elapsed);
+    // BUG FIX: last-3-sec warnBeep was completely absent for For Time
+    if (targetSecs > 0) {
+      const timeLeft = targetSecs - elapsed;
+      if (timeLeft > 0 && timeLeft <= 3) {
+        warnBeep(timeLeft);
+        triggerFlash();
+        document.getElementById('giant-clock').classList.add('blink');
+      }
+    }
     if (targetSecs > 0 && elapsed >= targetSecs) {
       clearInterval(timerInterval); longBeep(); showFinish();
     }
