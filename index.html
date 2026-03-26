@@ -972,21 +972,21 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
   transition: color .2s, text-shadow .2s, opacity .15s;
 }
 
-/* For Time = neon green */
+/* For Time = neon red */
 #giant-clock[data-mode="fortime"] #giant-time {
-  color: #00FF00;
-  text-shadow: 0 0 15px #00FF00, 0 0 40px rgba(0,255,0,.5), 0 0 80px rgba(0,255,0,.2);
+  color: #FF0000;
+  text-shadow: 0 0 15px #FF0000, 0 0 40px rgba(255,0,0,.5), 0 0 80px rgba(255,0,0,.2);
 }
-/* AMRAP = neon yellow */
+/* AMRAP = neon red */
 #giant-clock[data-mode="amrap"] #giant-time {
-  color: #FFFF00;
-  text-shadow: 0 0 15px #FFFF00, 0 0 40px rgba(255,255,0,.45), 0 0 80px rgba(255,255,0,.18);
+  color: #FF0000;
+  text-shadow: 0 0 15px #FF0000, 0 0 40px rgba(255,0,0,.5), 0 0 80px rgba(255,0,0,.2);
 }
 
-/* Last 10 sec AMRAP: shift to red */
+/* Last 10 sec AMRAP: intensify red glow */
 #giant-clock[data-mode="amrap"].warn #giant-time {
-  color: #FF2020;
-  text-shadow: 0 0 15px #FF2020, 0 0 40px rgba(255,32,32,.6);
+  color: #FF0000;
+  text-shadow: 0 0 15px #FF0000, 0 0 40px rgba(255,0,0,.8), 0 0 80px rgba(255,0,0,.4);
 }
 
 @keyframes giant-blink { 0%,49% { opacity:1; } 50%,100% { opacity:.08; } }
@@ -1003,15 +1003,15 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
   /* keep colour class intact — just remove animated glow */
   animation: none !important;
 }
-/* Green frozen */
+/* Red frozen — For Time */
 #giant-clock[data-mode="fortime"].frozen #giant-time {
-  color: #00FF00;
-  text-shadow: 0 0 6px rgba(0,255,0,.4);
+  color: #FF0000;
+  text-shadow: 0 0 6px rgba(255,0,0,.4);
 }
-/* Yellow frozen */
+/* Red frozen — AMRAP */
 #giant-clock[data-mode="amrap"].frozen #giant-time {
-  color: #FFFF00;
-  text-shadow: 0 0 6px rgba(255,255,0,.35);
+  color: #FF0000;
+  text-shadow: 0 0 6px rgba(255,0,0,.4);
 }
 /* Frozen hint label */
 #giant-frozen-label {
@@ -1876,7 +1876,7 @@ body::after {
   </div>
 
   <div class="run-mode-tag" id="run-mode-tag">FOR TIME</div>
-  <div class="timer-display green" id="timer-display">00:00</div>
+  <div class="timer-display red" id="timer-display">00:00</div>
   <div id="split-popup"></div>
   <div class="set-dots hidden" id="set-dots"></div>
 
@@ -2510,7 +2510,7 @@ function startTimer() {
     document.getElementById('giant-clock').classList.remove('warn', 'blink');
     document.getElementById('giant-time').textContent = '00:00';
     document.getElementById('giant-splits').innerHTML = '';
-    display.className   = 'timer-display green';
+    display.className   = 'timer-display red';
     display.textContent = '00:00';
     modeTag.textContent = 'FOR TIME';
     setCtr.classList.add('hidden');
@@ -2524,7 +2524,7 @@ function startTimer() {
     document.getElementById('giant-clock').classList.remove('warn', 'blink');
     document.getElementById('giant-time').textContent = formatTime(0);
     document.getElementById('giant-splits').innerHTML = '';
-    display.className   = 'timer-display yellow';
+    display.className   = 'timer-display red';
     display.textContent = formatTime(0);
     modeTag.textContent = 'AMRAP';
     setCtr.classList.add('hidden');
@@ -2772,13 +2772,13 @@ function resetTimer() {
   if (gc) gc.classList.remove('warn', 'blink', 'frozen');
 
   if (mode === 'fortime') {
-    document.getElementById('timer-display').className   = 'timer-display green';
+    document.getElementById('timer-display').className   = 'timer-display red';
     document.getElementById('timer-display').textContent = '00:00';
     document.getElementById('giant-time').textContent    = '00:00';
     document.getElementById('giant-clock').classList.remove('warn','blink');
     document.getElementById('giant-splits').innerHTML = '';
   } else if (mode === 'amrap') {
-    document.getElementById('timer-display').className   = 'timer-display yellow';
+    document.getElementById('timer-display').className   = 'timer-display red';
     document.getElementById('timer-display').textContent = '00:00';
     document.getElementById('giant-time').textContent    = '00:00';
     document.getElementById('giant-clock').classList.remove('warn','blink');
