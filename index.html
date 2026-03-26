@@ -1517,6 +1517,20 @@ body::after {
   display: block; line-height: 1.6;
 }
 
+/* BUG FIX: hide FS button in PWA standalone — screen is already fullscreen,
+   exitFullscreen() has nothing to exit (Web FS API != OS standalone mode).
+   Without this, the button showed the "contract" icon forever and did nothing. */
+@media (display-mode: standalone) {
+  #fs-btn { display: none !important; }
+}
+
+/* Landscape: raise the iOS hint clear of #gc-controls */
+@media (orientation: landscape) {
+  #ios-fs-hint {
+    bottom: max(90px, calc(env(safe-area-inset-bottom) + 76px));
+  }
+}
+
 /* ────────────────────────────────────────────────────────────────
    ORIENTATION TRANSITIONS
    ──────────────────────────────────────────────────────────────── */
@@ -2027,6 +2041,9 @@ function show(id) {
 
 function goHome() {
   clearTimeout(gcFinishTimer);   // BUG FIX: cancel pending showReport if Home pressed fast
+  // BUG FIX: dismiss iOS hint toast if still visible
+  clearTimeout(iosHintTimer); iosHintTimer = null;
+  if (iosFsHint) iosFsHint.classList.remove('show');
   // #region agent log: goHome cancels gcFinishTimer
   fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H2',location:'cf-timer-preview.html:goHome',message:'goHome() called; gcFinishTimer cleared',data:{gcFinishTimerCleared:true,timerIntervalIsNull:timerInterval===null,mode},timestamp:Date.now()})}).catch(()=>{});
   // #endregion
@@ -3418,8 +3435,10 @@ const isIOSBrowser = (function() {
 
 // ── Fullscreen helpers ───────────────────────────────────────────
 function isFullscreen() {
-  // In PWA standalone mode the entire viewport IS the screen — treat as fullscreen
-  if (window.matchMedia('(display-mode: standalone)').matches) return true;
+  // BUG FIX: removed standalone shortcut — standalone is NOT Web API fullscreen.
+  // exitFullscreen() can't undo OS-level standalone mode; mixing the two caused
+  // the contract icon to show permanently and the button to do nothing in PWA mode.
+  // Standalone is handled purely by the CSS @media (display-mode: standalone) guard.
   return !!(
     document.fullscreenElement        ||
     document.webkitFullscreenElement  ||
