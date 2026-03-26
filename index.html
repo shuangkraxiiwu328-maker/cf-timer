@@ -4,6 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>CF TIMER</title>
+
+<!-- PWA: enables "Add to Home Screen" → true standalone fullscreen on mobile -->
+<link rel="manifest" href="manifest.json" />
+<!-- iOS Safari standalone mode (required in addition to manifest) -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="CF TIMER" />
+<!-- Android / generic PWA theme -->
+<meta name="theme-color" content="#050505" />
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 /* ================================================================
@@ -1479,6 +1488,35 @@ body::after {
 }
 #rotate-hint.show { opacity: 1; }
 
+/* iOS install hint — shown when user taps FS button on iOS Safari */
+#ios-fs-hint {
+  position: fixed;
+  bottom: max(72px, calc(env(safe-area-inset-bottom) + 58px));
+  left: 50%; transform: translateX(-50%);
+  z-index: 10002;
+  background: rgba(10,10,10,.96);
+  border: 1px solid rgba(0,229,255,.22);
+  border-radius: var(--r-md);
+  padding: 14px 20px;
+  width: min(300px, 88vw);
+  pointer-events: none; opacity: 0;
+  transition: opacity .35s var(--ease-spring);
+  text-align: center;
+}
+#ios-fs-hint.show { opacity: 1; }
+.ios-hint-line1 {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: .28em;
+  color: var(--cyan); text-transform: uppercase;
+  display: block; margin-bottom: 6px;
+}
+.ios-hint-line2 {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: .14em;
+  color: rgba(255,255,255,.35); text-transform: uppercase;
+  display: block; line-height: 1.6;
+}
+
 /* ────────────────────────────────────────────────────────────────
    ORIENTATION TRANSITIONS
    ──────────────────────────────────────────────────────────────── */
@@ -1924,6 +1962,12 @@ body::after {
 
 <!-- Rotate hint -->
 <div id="rotate-hint">⟳ 建议旋转手机以获得最佳视野</div>
+
+<!-- iOS fullscreen install hint -->
+<div id="ios-fs-hint" aria-live="polite">
+  <span class="ios-hint-line1">iOS 全屏模式</span>
+  <span class="ios-hint-line2">点击浏览器底部 <strong style="color:rgba(255,255,255,.6)">分享</strong> 按钮<br>选择 <strong style="color:rgba(255,255,255,.6)">添加到主屏幕</strong> 即可全屏运行</span>
+</div>
 
 <!-- ══════ FULLSCREEN TOGGLE ══════
      Lives at the very top of the stacking context (z-index 10001).
@@ -3345,18 +3389,37 @@ updateStdDisplay();
 updateEmomDisplay();
 
 // ══════════════════════════════════════════════
-//  FULL-SCREEN ENGINE
-//  Cross-browser: Chrome / Edge / Firefox / Safari Mac
-//  iOS Safari note: arbitrary-element FS is blocked by the OS;
-//  the button still works as a best-effort and the PWA manifest
-//  "display: standalone" provides the closest equivalent there.
+//  FULL-SCREEN ENGINE  (v3 — mobile-aware)
+//
+//  Platform matrix:
+//  · Desktop Chrome/Edge/Firefox  → requestFullscreen({ navigationUI:'hide' }) ✓
+//  · Safari macOS                 → webkitRequestFullscreen() ✓
+//  · Android Chrome               → requestFullscreen() ✓
+//  · iOS Safari (in-browser)      → API blocked by OS; show "Add to Home Screen" hint
+//  · iOS Safari (PWA standalone)  → already fullscreen; button shows contract icon
 // ══════════════════════════════════════════════
 
 const fsBtn           = document.getElementById('fs-btn');
 const fsIconExpand    = document.getElementById('fs-icon-expand');
 const fsIconContract  = document.getElementById('fs-icon-contract');
+const iosFsHint       = document.getElementById('ios-fs-hint');
 
+// ── Platform detection ───────────────────────────────────────────
+// isIOSBrowser: true when running in iOS Safari (not installed PWA)
+// In standalone mode the page IS already fullscreen, so button shows exit.
+const isIOSBrowser = (function() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = ('standalone' in navigator && navigator.standalone === true) ||
+                       window.matchMedia('(display-mode: standalone)').matches;
+  return isIOS && !isStandalone;
+})();
+
+// ── Fullscreen helpers ───────────────────────────────────────────
 function isFullscreen() {
+  // In PWA standalone mode the entire viewport IS the screen — treat as fullscreen
+  if (window.matchMedia('(display-mode: standalone)').matches) return true;
   return !!(
     document.fullscreenElement        ||
     document.webkitFullscreenElement  ||
@@ -3365,24 +3428,23 @@ function isFullscreen() {
   );
 }
 
-// BUG FIX: vendor-prefixed methods return undefined (synchronous), not a Promise.
-// Wrap them in Promise.resolve() so the call chain is always thenable.
-// Pass { navigationUI:'hide' } to the standard API so the address bar is
-// explicitly hidden — without it Chrome defaults to 'auto' which may leave
-// a condensed navbar visible.
 function requestFS(el) {
-  if (el.requestFullscreen) {
+  // Standard API (Chrome 71+, Firefox, Edge, Safari 16.4+, Android Chrome)
+  if (typeof el.requestFullscreen === 'function') {
     return el.requestFullscreen({ navigationUI: 'hide' });
   }
-  if (el.webkitRequestFullscreen) {
+  // Safari macOS (pre-16.4) — synchronous, no Promise return
+  if (typeof el.webkitRequestFullscreen === 'function') {
     try { el.webkitRequestFullscreen(); return Promise.resolve(); }
     catch(e) { return Promise.reject(e); }
   }
-  if (el.mozRequestFullScreen) {
+  // Firefox legacy
+  if (typeof el.mozRequestFullScreen === 'function') {
     try { el.mozRequestFullScreen(); return Promise.resolve(); }
     catch(e) { return Promise.reject(e); }
   }
-  if (el.msRequestFullscreen) {
+  // IE/Edge legacy
+  if (typeof el.msRequestFullscreen === 'function') {
     try { el.msRequestFullscreen(); return Promise.resolve(); }
     catch(e) { return Promise.reject(e); }
   }
@@ -3390,49 +3452,59 @@ function requestFS(el) {
 }
 
 function exitFS() {
-  if (document.exitFullscreen)       return document.exitFullscreen();
-  if (document.webkitExitFullscreen) {
-    try { document.webkitExitFullscreen(); return Promise.resolve(); }
-    catch(e) { return Promise.resolve(); }   // already not FS — ignore
+  if (typeof document.exitFullscreen === 'function')       return document.exitFullscreen();
+  if (typeof document.webkitExitFullscreen === 'function') {
+    try { document.webkitExitFullscreen(); } catch(_) {} return Promise.resolve();
   }
-  if (document.mozCancelFullScreen) {
-    try { document.mozCancelFullScreen(); return Promise.resolve(); }
-    catch(e) { return Promise.resolve(); }
+  if (typeof document.mozCancelFullScreen === 'function') {
+    try { document.mozCancelFullScreen(); }  catch(_) {} return Promise.resolve();
   }
-  if (document.msExitFullscreen) {
-    try { document.msExitFullscreen(); return Promise.resolve(); }
-    catch(e) { return Promise.resolve(); }
+  if (typeof document.msExitFullscreen === 'function') {
+    try { document.msExitFullscreen(); }     catch(_) {} return Promise.resolve();
   }
   return Promise.resolve();
 }
 
-// BUG FIX: removed outer try/catch that was silently swallowing ALL errors.
-// Errors are now logged so the root cause is visible in DevTools console.
+// ── iOS hint toast ───────────────────────────────────────────────
+let iosHintTimer = null;
+function showIosHint() {
+  if (!iosFsHint) return;
+  iosFsHint.classList.add('show');
+  clearTimeout(iosHintTimer);
+  iosHintTimer = setTimeout(() => iosFsHint.classList.remove('show'), 4000);
+}
+
+// ── Toggle ───────────────────────────────────────────────────────
 function toggleFullscreen() {
+  // iOS Safari in-browser: Fullscreen API is blocked by the OS.
+  // Show an actionable hint instead of silently doing nothing.
+  if (isIOSBrowser) {
+    showIosHint();
+    return;
+  }
+
   if (isFullscreen()) {
     exitFS().catch(() => {});
   } else {
     requestFS(document.documentElement).catch(err => {
-      if (!err || err.message !== 'no-fs-api') {
-        // Log real denials (NotAllowedError, SecurityError, etc.) for debugging
-        console.warn('[CF-TIMER] Fullscreen request rejected:', err && err.message);
-      }
-      // 'no-fs-api' = iOS Safari — expected, stay silent
+      console.warn('[CF-TIMER] Fullscreen rejected:', err && err.message);
     });
   }
 }
 
+// ── Icon sync ────────────────────────────────────────────────────
 function syncFsIcon() {
   const inFS = isFullscreen();
-  fsIconExpand.style.display   = inFS ? 'none'  : '';
-  fsIconContract.style.display = inFS ? ''      : 'none';
+  fsIconExpand.style.display   = inFS ? 'none' : '';
+  fsIconContract.style.display = inFS ? ''     : 'none';
 }
-
-// Update icon whenever FS state changes (including browser's own Esc key)
+// Sync on every browser fullscreenchange event
 ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
   .forEach(ev => document.addEventListener(ev, syncFsIcon));
+// Also sync on load (covers standalone PWA case)
+syncFsIcon();
 
-// Touch feedback for mobile (mirrors gc-btn pattern)
+// ── Touch feedback ───────────────────────────────────────────────
 fsBtn.addEventListener('touchstart', () => fsBtn.classList.add('touched'),   { passive: true });
 fsBtn.addEventListener('touchend',   () => fsBtn.classList.remove('touched'), { passive: true });
 fsBtn.addEventListener('click', toggleFullscreen);
