@@ -2044,9 +2044,6 @@ function goHome() {
   // BUG FIX: dismiss iOS hint toast if still visible
   clearTimeout(iosHintTimer); iosHintTimer = null;
   if (iosFsHint) iosFsHint.classList.remove('show');
-  // #region agent log: goHome cancels gcFinishTimer
-  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H2',location:'cf-timer-preview.html:goHome',message:'goHome() called; gcFinishTimer cleared',data:{gcFinishTimerCleared:true,timerIntervalIsNull:timerInterval===null,mode},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   clearInterval(timerInterval); timerInterval = null;
   clearFlash(); releaseWakeLock();
   clearSplits();
@@ -2405,6 +2402,14 @@ function warnBeep(n) {
   tone(f, 0.15, 1.0, 0, `warn-${n}`);
 }
 
+// ── Final-second long beep (For Time / AMRAP end warning) ─────────
+// Same pitch as warn "1" (E6 1319Hz) but held 4× longer so it reads
+// as a distinct "last call" rather than a regular countdown tick.
+function finalBeep() {
+  console.info('[CF-AUDIO] ⏱ finalBeep fired — last second');
+  tone(1319, 0.60, 1.0, 0, 'final');   // E6 — held, distinct from 0.15s ticks
+}
+
 // ── GO / Set-start horn ────────────────────────────────────────────
 // Three ascending stabs scheduled precisely on the audio clock.
 // No setTimeout() — all three fire from the same JS call, guaranteed
@@ -2464,9 +2469,6 @@ function startCountdown() {
       el.style.color = 'var(--green)';
       el.style.textShadow = '0 0 55px rgba(57,255,20,.7)';
       document.getElementById('cd-label').textContent = '';
-      // #region agent log: countdown schedules startTimer
-      fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H4',location:'cf-timer-preview.html:startCountdown',message:'setTimeout(startTimer,800) scheduled',data:{mode, cdVal, elapsed, remaining, paused},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       setTimeout(startTimer, 800);
       return;
     }
@@ -2484,9 +2486,6 @@ function startCountdown() {
 // ══════════════════════════════════════════════
 function startTimer() {
   elapsed = 0; paused = false;
-  // #region agent log: startTimer entry
-  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H4',location:'cf-timer-preview.html:startTimer',message:'startTimer() entered',data:{mode, elapsed, remaining, paused, timerIntervalIsNull:timerInterval===null, gcFrozen},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   clearFlash();
   clearSplits();
   lastSplitTimestamp = 0;
@@ -2587,7 +2586,7 @@ function tick() {
     if (targetSecs > 0) {
       const timeLeft = targetSecs - elapsed;
       if (timeLeft > 0 && timeLeft <= 3) {
-        warnBeep(timeLeft);
+        if (timeLeft === 1) finalBeep(); else warnBeep(timeLeft);
         triggerFlash();
         document.getElementById('giant-clock').classList.add('blink');
       }
@@ -2610,7 +2609,7 @@ function tick() {
       gc.classList.add('warn');
     }
     if (remaining <= 3 && remaining > 0) {
-      warnBeep(remaining);
+      if (remaining === 1) finalBeep(); else warnBeep(remaining);
       triggerFlash();
       gc.classList.add('blink');
     }
@@ -3043,9 +3042,6 @@ function gcCtrlHome(e) {
 
 function gcCtrlReset(e) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
-  // #region agent log: gcCtrlReset state before reset
-  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H1',location:'cf-timer-preview.html:gcCtrlReset',message:'gcCtrlReset() called',data:{mode, gcFrozen, timerIntervalIsNull:timerInterval===null, gcFinishTimerIsSet:gcFinishTimer!==null, elapsed, remaining, paused, splitsHistoryLen:splitsHistory.length},timestamp:Date.now()} )}).catch(()=>{});
-  // #endregion
   gcCancelLongPress();
   resetTimer();
 }
@@ -3074,12 +3070,6 @@ document.addEventListener('DOMContentLoaded', () => {
 //  REPORT MODAL
 // ══════════════════════════════════════════════
 function showReport() {
-  // #region agent log: showReport entry
-  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H1',location:'cf-timer-preview.html:showReport',message:'showReport() called',data:{mode, gcFrozen, elapsed, remaining, paused, splitsHistoryLen:splitsHistory.length},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-  // #region agent log: showReport context check
-  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H3',location:'cf-timer-preview.html:showReport',message:'showReport() context for hypothesis H3',data:{mode, gcFrozen, paused, elapsed, remaining, splitsHistoryLen:splitsHistory.length},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   releaseWakeLock();
   clearFlash();
   gcCancelLongPress();
@@ -3303,9 +3293,6 @@ function gcFireFinish() {
   if (hint) hint.textContent = 'LOCKED  ·  HOME TO EXIT';
   clearTimeout(gcFinishTimer);
   gcFinishTimer = setTimeout(showReport, 340);
-  // #region agent log: gcFinishTimer scheduled showReport
-  fetch('http://127.0.0.1:7334/ingest/5323b5d6-4351-452c-b3f2-d015abddf2b6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a266'},body:JSON.stringify({sessionId:'88a266',runId:'pre_h1_reset_cancel',hypothesisId:'H1',location:'cf-timer-preview.html:gcFireFinish',message:'gcFinishTimer scheduled showReport',data:{mode, elapsed, remaining, paused, timerIntervalIsNull:timerInterval===null, gcFinishTimerIsSet:true, delayMs:340},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 }
 
 // ── Single tap: split (e may be null from keyboard) ──────────────
