@@ -906,7 +906,8 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
   position: fixed; inset: 0; z-index: 3;
   background: #000;
   flex-direction: row; align-items: stretch;
-  --led-size: clamp(60px, 16vh, 160px);
+  /* GIGA-DISPLAY: larger LED digits for high-stress readability */
+  --led-size: clamp(68px, 19vh, 186px);
 }
 #running.emom-mode #emom-board { display: flex; }
 
@@ -995,7 +996,15 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
   flex-direction: column;
   align-items: center; justify-content: center;
   cursor: pointer;
-  --giant-size: clamp(60px, min(19vw, 22vh), 280px);
+  /* GIGA-DISPLAY: 30vw fills ~90% of narrow screens (incl. iPhone SE 320px).
+     Body overflow:hidden prevents horizontal scroll even if digits clip edges.
+     Clamped at 300px so desktop/iPad doesn't produce comically huge digits.   */
+  --giant-size: clamp(80px, 30vw, 300px);
+  transition: padding-bottom .25s ease;
+}
+/* Push digit cluster up when the mega action button occupies the bottom 30% */
+body.mega-active #giant-clock {
+  padding-bottom: 30vh;
 }
 #running.giant-mode #giant-clock { display: flex; }
 
@@ -1719,9 +1728,9 @@ body::after {
   #emom-set-panel  { padding: 0; }
   #emom-time-panel { padding: 0; }
 
-  /* Giant clock landscape */
+  /* Giant clock landscape — height-limited since screen is shorter */
   #giant-clock {
-    --giant-size: clamp(80px, min(70vh, 28vw), 360px);
+    --giant-size: clamp(80px, min(72vh, 28vw), 360px);
     padding-bottom: 72px;
   }
 
@@ -1763,6 +1772,88 @@ body::after {
 /* ── Split sidebar/log orientation ──── */
 @media (orientation: landscape) { #split-sidebar { display: none; } }
 @media (orientation: portrait)  { #split-log     { display: none; } }
+
+/* ════════════════════════════════════════════════════════════════
+   MEGA ACTION BUTTONS — "Taped-Finger" UX
+   For Time  →  #mega-finish-btn  (Neon Yellow / black text)
+   AMRAP     →  #mega-round-btn   (Neon Cyan   / black text)
+
+   Design rules:
+   · Fixed bottom, full-width, 30vh tall + safe-area padding
+   · z-index 9998: above giant-clock (4) but below gc-controls (9999)
+     and report-modal (10000)
+   · Hidden by default; .visible class toggled by syncMegaBtns() in JS
+   · Pulse animation: subtle brightness oscillation — impossible to miss
+     but not so aggressive it triggers photosensitivity concerns
+   ════════════════════════════════════════════════════════════════ */
+
+@keyframes mega-pulse {
+  0%, 100% { opacity: 1;    box-shadow: 0 -4px 40px rgba(255,255,0,.25); }
+  50%       { opacity: 0.88; box-shadow: 0 -4px 80px rgba(255,255,0,.55); }
+}
+@keyframes mega-pulse-cyan {
+  0%, 100% { opacity: 1;    box-shadow: 0 -4px 40px rgba(0,229,255,.22); }
+  50%       { opacity: 0.88; box-shadow: 0 -4px 80px rgba(0,229,255,.50); }
+}
+
+/* Shared base for both mega buttons */
+.mega-btn {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  /* 30vh height + iOS home-indicator clearance */
+  height: calc(30vh + env(safe-area-inset-bottom, 0px));
+  /* Content sits in safe zone, bg bleeds to edge */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: 0; padding-right: 0;
+  z-index: 9998;
+  display: none;            /* shown via .visible class */
+  align-items: center;
+  justify-content: center;
+  border: none; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: clamp(32px, 9vw, 60px);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  /* Full area = tap target — no inner dead zones */
+  touch-action: manipulation;
+}
+.mega-btn.visible { display: flex; }
+
+/* For Time — Neon Yellow */
+#mega-finish-btn {
+  background: #FFFF00;
+  color: #000;
+  animation: mega-pulse 2.2s ease-in-out infinite;
+}
+#mega-finish-btn:active {
+  background: #e6e600;
+  animation: none;
+  transform: scale(0.99);
+}
+
+/* AMRAP — Neon Cyan */
+#mega-round-btn {
+  background: #00E5FF;
+  color: #000;
+  animation: mega-pulse-cyan 2.2s ease-in-out infinite;
+}
+#mega-round-btn:active {
+  background: #00cceb;
+  animation: none;
+  transform: scale(0.99);
+}
+
+/* Landscape: shrink mega button — full 30vh is excessive in landscape */
+@media (orientation: landscape) {
+  .mega-btn {
+    height: calc(22vh + env(safe-area-inset-bottom, 0px));
+    font-size: clamp(22px, 6vw, 40px);
+  }
+  body.mega-active #giant-clock { padding-bottom: 22vh; }
+}
 </style>
 </head>
 <body>
@@ -2020,7 +2111,7 @@ body::after {
 
   <div class="gc-sep"></div>
 
-  <!-- FINISH button -->
+  <!-- FINISH button (small ghost — hidden in For Time when mega-finish-btn is shown) -->
   <button class="gc-btn finish-btn" id="gc-finish-btn" aria-label="Finish"
           onclick="gcCtrlFinish(event)">
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -2032,6 +2123,19 @@ body::after {
   </button>
 
 </div>
+
+<!-- ══════ MEGA ACTION BUTTONS — Taped-Finger UX ══════
+     For Time : solid Neon Yellow "FINISH"
+     AMRAP    : solid Neon Cyan  "+ ROUND"
+     z-index 9998 — above giant-clock (4), below gc-controls (9999)
+     and report-modal (10000). syncMegaBtns() in JS shows/hides them.  -->
+<button class="mega-btn" id="mega-finish-btn"
+        aria-label="Finish workout"
+        onclick="gcCtrlFinish(event)">FINISH</button>
+
+<button class="mega-btn" id="mega-round-btn"
+        aria-label="Record round"
+        onclick="megaRoundTap(event)">+&nbsp;ROUND</button>
 
 <!-- ══════ FINISH ══════ -->
 <div class="screen hidden" id="finish">
@@ -2139,6 +2243,36 @@ function show(id) {
   // Show #gc-controls only while running screen is active
   const gcCtrl = document.getElementById('gc-controls');
   if (gcCtrl) gcCtrl.classList.toggle('visible', id === 'running');
+  // Sync mega buttons — they depend on both screen and mode
+  syncMegaBtns();
+}
+
+// ── Mega action button visibility sync ────────────────────────────
+// Called from show(), showReport(), showFinish(), and startTimer().
+// Reads current state rather than taking parameters — single source of truth.
+function syncMegaBtns() {
+  const fb = document.getElementById('mega-finish-btn');
+  const rb = document.getElementById('mega-round-btn');
+  const reportHidden  = document.getElementById('report-modal').classList.contains('hidden');
+  const finishHidden  = document.getElementById('finish').classList.contains('hidden');
+  const runningActive = !document.getElementById('running').classList.contains('hidden');
+  // Show FINISH (yellow) only during active For Time run, not while report/finish screens overlap
+  const showFB = runningActive && reportHidden && finishHidden && mode === 'fortime';
+  // Show +ROUND (cyan) only during active AMRAP run
+  const showRB = runningActive && reportHidden && finishHidden && mode === 'amrap';
+  if (fb) fb.classList.toggle('visible', showFB);
+  if (rb) rb.classList.toggle('visible', showRB);
+  // body.mega-active shifts giant-clock upward so digits don't overlap the button
+  document.body.classList.toggle('mega-active', showFB || showRB);
+  // Hide the small ghost FINISH button in gc-controls when mega-finish is visible
+  const gcFin = document.getElementById('gc-finish-btn');
+  if (gcFin) gcFin.style.display = showFB ? 'none' : '';
+}
+
+// ── AMRAP mega round button handler ───────────────────────────────
+function megaRoundTap(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  gcHandleTap(null);   // records a split (same as tapping the clock face)
 }
 
 function goHome() {
@@ -3160,6 +3294,7 @@ function showFinish() {
   if (mode === 'amrap')   { showReport(); return; }
 
   // EMOM → classic finish screen
+  syncMegaBtns();   // clear mega-active before finishing
   releaseWakeLock(); clearFlash();
   tryUnlockOrientation();
   const ft   = document.getElementById('fin-title');
@@ -3433,6 +3568,9 @@ function showReport() {
   // BUG FIX: hide the stealth control bar so it doesn't float over the poster
   const gcCtrl = document.getElementById('gc-controls');
   if (gcCtrl) gcCtrl.classList.remove('visible');
+  // Hide mega buttons — report-modal (z:10000) sits above them anyway, but
+  // hiding is cleaner and ensures body.mega-active is removed (restores clock padding).
+  syncMegaBtns();
 
   // Total time: For Time = elapsed; AMRAP = time cap
   const totalTime = mode === 'amrap' ? targetSecs : elapsed;
