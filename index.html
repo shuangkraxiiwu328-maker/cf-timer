@@ -2113,6 +2113,7 @@ let emomTotalSecs = 1800;
 let timerInterval = null;
 let elapsed = 0, remaining = 0, paused = false;
 let emomCurrentSet = 1;
+let elapsedInSet = 0;   // EMOM-only: seconds counted UP within the current set (0 → emomSetSecs)
 
 // Wake Lock
 let wakeLock = null;
@@ -2860,7 +2861,7 @@ function startTimer() {
   } else {
     // EMOM — activate LED hardware board (COUNT UP from 00:00)
     emomCurrentSet = 1;
-    remaining      = 0;   // COUNT-UP: 0 → emomSetSecs per set (was emomSetSecs)
+    elapsedInSet   = 0;   // dedicated EMOM counter — never shares state with remaining (AMRAP)
     elapsed        = 0;   // purge any For Time / AMRAP elapsed state
     document.getElementById('running').classList.add('emom-mode');
     modeTag.textContent = 'EMOM';
@@ -2946,17 +2947,18 @@ function tick() {
   }
 
   /* ── EMOM (COUNT UP: 00:00 → emomSetSecs per set) ── */
-  // Increment elapsed time within the current set
-  remaining++;
+  // elapsedInSet is the dedicated EMOM counter — never touches `remaining`
+  elapsedInSet++;
+  elapsed++;   // global elapsed still tracks total session time for the finish screen
 
   // ── Set complete? (check BEFORE updating display to avoid 1-frame flash) ──
-  if (remaining >= emomSetSecs) {
+  if (elapsedInSet >= emomSetSecs) {
     ledClearWarning();
     clearFlash();
 
     if (emomCurrentSet >= emomSets) {
-      // ── All sets done — freeze display on final time ──
-      ledTimeNum(remaining);   // shows e.g. "01:00" as the frozen final frame
+      // ── All sets done — freeze display on the full set time ──
+      ledTimeNum(emomSetSecs);   // shows e.g. "01:00" as the frozen final frame
       clearInterval(timerInterval);
       longBeep();
       showFinish();
@@ -2964,14 +2966,13 @@ function tick() {
     }
 
     // ── Advance to next set ──
-    // Reset elapsed-in-set to 0 BEFORE any DOM update so the browser
-    // only ever paints "00:00" — no "01:00" stutter between sets.
+    // Reset elapsedInSet to 0 FIRST — browser never paints the old value
     emomCurrentSet++;
-    remaining = 0;
+    elapsedInSet = 0;
     setStartBeep();
     ledSetNum(emomCurrentSet);
-    ledTimeNum(0);           // immediate 00:00 display ✓
-    ledGoFlash();            // Neon Cyan flash at each 00:00 mark
+    ledTimeNum(0);           // 00:00 display ✓
+    ledGoFlash();            // Neon Cyan flash at each new 00:00
     refreshProgressBar();
     updateSetCounter(false);
     updateDots();
@@ -2979,15 +2980,15 @@ function tick() {
   }
 
   // ── Normal tick: update display then check pre-set warning ──
-  ledTimeNum(remaining);
+  ledTimeNum(elapsedInSet);
   refreshProgressBar();
 
-  // Last-3-sec warning before set end (e.g. fires at 00:57, 00:58, 00:59)
-  const timeLeft = emomSetSecs - remaining;
-  if (timeLeft > 0 && timeLeft <= 3) {
-    if (timeLeft === 1) finalBeep(); else warnBeep(timeLeft);
+  // Pre-set warning pips (fires at e.g. 00:57, 00:58, 00:59 for 1-min sets)
+  const _emomTimeLeft = emomSetSecs - elapsedInSet;
+  if (_emomTimeLeft > 0 && _emomTimeLeft <= 3) {
+    if (_emomTimeLeft === 1) finalBeep(); else warnBeep(_emomTimeLeft);
     triggerFlash();
-    ledSetWarning();   // both numbers turn red + blink on LED board
+    ledSetWarning();
   }
 }
 
@@ -3003,9 +3004,8 @@ function updateSetCounter(immediate) {
 
 function refreshProgressBar() {
   if (mode !== 'emom') return;
-  // COUNT-UP: `remaining` is elapsed seconds within current set (0 → emomSetSecs)
-  // was: (emomSetSecs - remaining) — that formula was for count-DOWN
-  const done = (emomCurrentSet - 1) * emomSetSecs + remaining;
+  // elapsedInSet = seconds counted up within the current set (0 → emomSetSecs)
+  const done = (emomCurrentSet - 1) * emomSetSecs + elapsedInSet;
   const pct  = emomTotalSecs > 0 ? (done / emomTotalSecs) * 100 : 0;
   document.getElementById('set-progress-bar').style.width = Math.min(100, pct) + '%';
 }
@@ -3090,7 +3090,7 @@ function togglePause() {
     disp.classList.remove('paused');
     board.classList.remove('paused');
     run.classList.remove('giant-paused');
-    if (mode === 'emom' && remaining <= 3 && remaining > 0) ledSetWarning();
+    if (mode === 'emom' && (emomSetSecs - elapsedInSet) <= 3 && elapsedInSet < emomSetSecs) ledSetWarning();
     else ledClearWarning();
   }
 }
@@ -3123,12 +3123,13 @@ function resetTimer() {
     document.getElementById('giant-clock').classList.remove('warn','blink');
     document.getElementById('giant-splits').innerHTML = '';
   } else {
-    emomCurrentSet = 1; remaining = emomSetSecs;
+    // EMOM reset: use elapsedInSet (not remaining) — was the root cause of count-down bug
+    emomCurrentSet = 1; elapsedInSet = 0;
     document.getElementById('timer-display').className   = 'timer-display cyan';
-    document.getElementById('timer-display').textContent = formatTime(remaining);
+    document.getElementById('timer-display').textContent = formatTime(0);
     document.getElementById('emom-board').classList.remove('paused', 'warning');
     ledSetNum(emomCurrentSet);
-    ledTimeNum(remaining);
+    ledTimeNum(0);   // show 00:00 — was ledTimeNum(remaining) = "01:00"
     ledGoFlash();
     updateSetCounter(true); refreshProgressBar(); buildDots();
     setStartBeep();
