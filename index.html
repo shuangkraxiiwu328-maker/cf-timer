@@ -1828,16 +1828,16 @@ body::after {
 }
 .mega-btn.visible { display: flex; }
 
-/* For Time — "Floating White" on Pure Black */
+/* For Time — "Floating White" — fully transparent background */
 #mega-finish-btn {
-  background: #000000;          /* pure black — matches page bg, button "disappears" */
-  color: #ffffff;               /* massive bold pure white text */
+  background: transparent !important;   /* NO background — text floats on black screen */
+  color: #ffffff;                        /* pure white */
   letter-spacing: .08em;
-  text-shadow: 0 0 10px rgba(255,255,255,0.5);   /* subtle floating glow */
-  border-top: 1px solid rgba(255,255,255,.06);   /* hairline separator, almost invisible */
+  text-shadow: 0 0 12px rgba(255,255,255,0.6);   /* premium floating glow */
+  border-top: 1px solid rgba(255,255,255,.05);
 }
 #mega-finish-btn:active {
-  background: #111111;
+  background: rgba(255,255,255,.04) !important;
   transform: scale(0.99);
 }
 
@@ -2942,7 +2942,7 @@ function startCountdown() {
     cdVal--;
     if (cdVal <= 0) {
       clearInterval(cdInterval);
-      tone(1319, 0.10, 1.0, 0, 'go-pip');   // 100ms sharp pip — identical pitch to "1" in 3-2-1
+      // Silent start — no GO sound. 3-2-1 pips fire above; timer begins in silence.
       el.textContent = 'GO!';
       el.style.color = 'var(--green)';
       el.style.textShadow = '0 0 55px rgba(57,255,20,.7)';
