@@ -769,6 +769,8 @@ html, body {
 body:has(#running:not(.hidden)) #gc-controls { display: flex; }
 /* Simpler: we toggle display via JS on show/hide */
 #gc-controls.visible { display: flex; }
+/* When mega-finish-btn is active (For Time + AMRAP): completely hide gc-controls */
+body.mega-active #gc-controls { display: none !important; }
 
 .gc-btn {
   /* Each button is a 56×56 touch target */
@@ -811,21 +813,9 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
 }
 
 /* Per-button accent colors (inherit into svg + label) */
-.gc-btn.home-btn   { color: rgba(255,255,255,.75); }
-.gc-btn.reset-btn  { color: rgba(255,255,255,.75); }
 .gc-btn.finish-btn { color: var(--green); }
 
-.gc-btn.home-btn:hover,   .gc-btn.home-btn.touched   { filter: drop-shadow(0 0 8px rgba(255,255,255,.35)); }
-.gc-btn.reset-btn:hover,  .gc-btn.reset-btn.touched  { filter: drop-shadow(0 0 8px rgba(255,255,255,.35)); }
 .gc-btn.finish-btn:hover, .gc-btn.finish-btn.touched { filter: drop-shadow(0 0 12px rgba(0,255,0,.55)); }
-
-/* Separator dot between buttons */
-.gc-sep {
-  width: 3px; height: 3px; border-radius: 50%;
-  background: rgba(255,255,255,.12);
-  margin: 0 10px;
-  flex-shrink: 0;
-}
 
 /* Legacy controls bar — kept for EMOM PAUSE button wiring,
    but visually hidden. EMOM uses #gc-controls for Home/Reset/Finish. */
@@ -1619,6 +1609,49 @@ body::after {
   display: block; line-height: 1.6;
 }
 
+/* ────────────────────────────────────────────────────────────────
+   LEFT NAV — Home (←) + Reset (↺), mid-left, clear of FINISH zone
+   ──────────────────────────────────────────────────────────────── */
+#left-nav {
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  top: max(14px, env(safe-area-inset-top));
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  pointer-events: none;
+}
+#left-nav.visible { display: flex; }
+
+.nav-btn {
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none;
+  cursor: pointer; outline: none;
+  opacity: 0.18;
+  color: rgba(255,255,255,.80);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 24px;
+  line-height: 1;
+  transition: opacity 0.2s var(--ease-spring),
+              filter  0.2s var(--ease-spring),
+              transform 0.15s var(--ease-spring);
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-btn:hover, .nav-btn.touched {
+  opacity: 1;
+  filter: drop-shadow(0 0 8px rgba(255,255,255,.35));
+}
+.nav-btn:active { opacity: 1; transform: scale(0.88); }
+
+@media (orientation: landscape) {
+  #left-nav { gap: 4px; }
+  .nav-btn  { width: 40px; height: 40px; font-size: 20px; }
+}
+
 /* BUG FIX: hide FS button in PWA standalone — screen is already fullscreen,
    exitFullscreen() has nothing to exit (Web FS API != OS standalone mode).
    Without this, the button showed the "contract" icon forever and did nothing. */
@@ -1776,30 +1809,19 @@ body::after {
 @media (orientation: portrait)  { #split-log     { display: none; } }
 
 /* ════════════════════════════════════════════════════════════════
-   MEGA ACTION BUTTONS — "Taped-Finger" UX
-   For Time  →  #mega-finish-btn  (Neon Yellow / black text)
-   AMRAP     →  #mega-round-btn   (Neon Cyan   / black text)
+   MEGA FINISH BUTTON — "Taped-Finger" UX
+   For Time & AMRAP  →  #mega-finish-btn  (Floating White / transparent background)
 
    Design rules:
    · Fixed bottom, full-width, 30vh tall + safe-area padding
    · z-index 9998: above giant-clock (4) but below gc-controls (9999)
      and report-modal (10000)
    · Hidden by default; .visible class toggled by syncMegaBtns() in JS
-   · Pulse animation: subtle brightness oscillation — impossible to miss
-     but not so aggressive it triggers photosensitivity concerns
    ════════════════════════════════════════════════════════════════ */
 
-@keyframes mega-pulse {
-  0%, 100% { opacity: 1;    box-shadow: 0 -4px 40px rgba(255,255,0,.25); }
-  50%       { opacity: 0.88; box-shadow: 0 -4px 80px rgba(255,255,0,.55); }
-}
 @keyframes mega-finish-float {
-  0%, 100% { text-shadow: 0 0 28px rgba(255,255,255,.95), 0 0 60px rgba(255,255,255,.30); }
-  50%       { text-shadow: 0 0 48px #ffffff,               0 0 100px rgba(255,255,255,.55); }
-}
-@keyframes mega-pulse-cyan {
-  0%, 100% { opacity: 1;    box-shadow: 0 -4px 40px rgba(0,229,255,.22); }
-  50%       { opacity: 0.88; box-shadow: 0 -4px 80px rgba(0,229,255,.50); }
+  0%, 100% { text-shadow: 0 0 15px rgba(255,255,255,0.7), 0 0 40px rgba(255,255,255,.25); }
+  50%       { text-shadow: 0 0 28px rgba(255,255,255,1.0), 0 0 80px rgba(255,255,255,.50); }
 }
 
 /* Shared base for both mega buttons */
@@ -1828,27 +1850,17 @@ body::after {
 }
 .mega-btn.visible { display: flex; }
 
-/* For Time — "Floating White" — fully transparent background */
+/* For Time — "Floating White" — zero background, text floats on black */
 #mega-finish-btn {
-  background: transparent !important;   /* NO background — text floats on black screen */
+  background: none !important;          /* solid yellow FULLY removed */
   color: #ffffff;                        /* pure white */
   letter-spacing: .08em;
-  text-shadow: 0 0 12px rgba(255,255,255,0.6);   /* premium floating glow */
-  border-top: 1px solid rgba(255,255,255,.05);
+  text-shadow: 0 0 15px rgba(255,255,255,0.7);   /* floating neon glow per spec */
+  border-top: none;
+  animation: mega-finish-float 2.4s ease-in-out infinite;
 }
 #mega-finish-btn:active {
   background: rgba(255,255,255,.04) !important;
-  transform: scale(0.99);
-}
-
-/* AMRAP — Neon Cyan */
-#mega-round-btn {
-  background: #00E5FF;
-  color: #000;
-  animation: mega-pulse-cyan 2.2s ease-in-out infinite;
-}
-#mega-round-btn:active {
-  background: #00cceb;
   animation: none;
   transform: scale(0.99);
 }
@@ -2094,35 +2106,10 @@ body::after {
      Shown/hidden via JS alongside the running screen.         -->
 <div id="gc-controls" aria-label="Timer Controls">
 
-  <!-- HOME button -->
-  <button class="gc-btn home-btn" id="gc-home-btn" aria-label="Home"
-          onclick="gcCtrlHome(event)">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/>
-      <path d="M9 21V12h6v9"/>
-    </svg>
-    <span class="gc-btn-label">Home</span>
-  </button>
-
-  <div class="gc-sep"></div>
-
-  <!-- RESET button -->
-  <button class="gc-btn reset-btn" id="gc-reset-btn" aria-label="Reset"
-          onclick="gcCtrlReset(event)">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M3 12a9 9 0 109-9 9 9 0 00-4.5 1.18"/>
-      <polyline points="3 3 3 9 9 9"/>
-    </svg>
-    <span class="gc-btn-label">Reset</span>
-  </button>
-
-  <div class="gc-sep"></div>
-
   <!-- FINISH button (small ghost — hidden in For Time when mega-finish-btn is shown) -->
   <button class="gc-btn finish-btn" id="gc-finish-btn" aria-label="Finish"
           onclick="gcCtrlFinish(event)">
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <!-- Flag icon -->
       <path d="M4 21V4"/>
       <path d="M4 4l14 4-14 4"/>
     </svg>
@@ -2131,18 +2118,17 @@ body::after {
 
 </div>
 
-<!-- ══════ MEGA ACTION BUTTONS — Taped-Finger UX ══════
-     For Time : solid Neon Yellow "FINISH"
-     AMRAP    : solid Neon Cyan  "+ ROUND"
-     z-index 9998 — above giant-clock (4), below gc-controls (9999)
-     and report-modal (10000). syncMegaBtns() in JS shows/hides them.  -->
+<!-- ══════ MEGA FINISH BUTTON — Floating White "FINISH" ══════
+     For Time only · z-index 9998 · syncMegaBtns() shows/hides    -->
 <button class="mega-btn" id="mega-finish-btn"
         aria-label="Finish workout"
         onclick="gcCtrlFinish(event)">FINISH</button>
 
-<button class="mega-btn" id="mega-round-btn"
-        aria-label="Record round"
-        onclick="megaRoundTap(event)">+&nbsp;ROUND</button>
+<!-- ══════ LEFT NAV — Home + Reset, mid-left, clear of FINISH zone ══════ -->
+<div id="left-nav" aria-label="Navigation">
+  <button class="nav-btn" id="nav-home-btn"  aria-label="Home"  onclick="gcCtrlHome(event)">←</button>
+  <button class="nav-btn" id="nav-reset-btn" aria-label="Reset" onclick="gcCtrlReset(event)">↺</button>
+</div>
 
 <!-- ══════ FINISH ══════ -->
 <div class="screen hidden" id="finish">
@@ -2247,9 +2233,11 @@ let flashTimeout = null;
 // ══════════════════════════════════════════════
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('hidden', s.id !== id));
-  // Show #gc-controls only while running screen is active
-  const gcCtrl = document.getElementById('gc-controls');
-  if (gcCtrl) gcCtrl.classList.toggle('visible', id === 'running');
+  // Show #gc-controls and #left-nav only while running screen is active
+  const gcCtrl  = document.getElementById('gc-controls');
+  const leftNav = document.getElementById('left-nav');
+  if (gcCtrl)  gcCtrl.classList.toggle('visible', id === 'running');
+  if (leftNav) leftNav.classList.toggle('visible', id === 'running');
   // Sync mega buttons — they depend on both screen and mode
   syncMegaBtns();
 }
@@ -2259,27 +2247,20 @@ function show(id) {
 // Reads current state rather than taking parameters — single source of truth.
 function syncMegaBtns() {
   const fb = document.getElementById('mega-finish-btn');
-  const rb = document.getElementById('mega-round-btn');
   const reportHidden  = document.getElementById('report-modal').classList.contains('hidden');
   const finishHidden  = document.getElementById('finish').classList.contains('hidden');
   const runningActive = !document.getElementById('running').classList.contains('hidden');
-  // Show FINISH (yellow) only during active For Time run, not while report/finish screens overlap
+  // FINISH only for For Time — AMRAP auto-completes at time cap, no manual finish needed
   const showFB = runningActive && reportHidden && finishHidden && mode === 'fortime';
-  // Show +ROUND (cyan) only during active AMRAP run
-  const showRB = runningActive && reportHidden && finishHidden && mode === 'amrap';
   if (fb) fb.classList.toggle('visible', showFB);
-  if (rb) rb.classList.toggle('visible', showRB);
   // body.mega-active shifts giant-clock upward so digits don't overlap the button
-  document.body.classList.toggle('mega-active', showFB || showRB);
+  document.body.classList.toggle('mega-active', showFB);
   // Hide the small ghost FINISH button in gc-controls when mega-finish is visible
   const gcFin = document.getElementById('gc-finish-btn');
   if (gcFin) gcFin.style.display = showFB ? 'none' : '';
-}
-
-// ── AMRAP mega round button handler ───────────────────────────────
-function megaRoundTap(e) {
-  if (e) { e.stopPropagation(); e.preventDefault(); }
-  gcHandleTap(null);   // records a split (same as tapping the clock face)
+  // AMRAP: hide gc-controls entirely (only had the Finish button, which is now removed)
+  const gcCtrl = document.getElementById('gc-controls');
+  if (gcCtrl && mode === 'amrap' && runningActive) gcCtrl.classList.remove('visible');
 }
 
 function goHome() {
@@ -2897,6 +2878,12 @@ function triggerWodComplete() {
   clearFlash();
   tryUnlockOrientation();
 
+  // AMRAP: auto-navigate to report — no manual finish button needed
+  if (mode === 'amrap') {
+    showReport();
+    return;
+  }
+
   const gc   = document.getElementById('giant-clock');
   const hint = document.getElementById('giant-hint');
   const lbl  = document.getElementById('giant-frozen-label');
@@ -3007,6 +2994,7 @@ function startTimer() {
     setCtr.classList.add('hidden');
     setPWrap.classList.add('hidden');
     dotsEl.classList.add('hidden');
+    document.getElementById('giant-hint').textContent = '';
 
   } else {
     // EMOM — activate LED hardware board (COUNT UP from 00:00)
@@ -3025,9 +3013,7 @@ function startTimer() {
     ledSetNum(emomCurrentSet);
     ledTimeNum(0);
     ledClearWarning();
-    ledGoFlash();       // Neon Cyan flash on set 1 start
-    // Play start beep for set 1
-    setStartBeep();
+    ledGoFlash();       // Neon Cyan flash on set 1 start — silent per spec
   }
 
   show('running');
@@ -3119,7 +3105,7 @@ function tick() {
     // Reset elapsedInSet to 0 FIRST — browser never paints the old value
     emomCurrentSet++;
     elapsedInSet = 0;
-    setStartBeep();
+    // Silent start: 3-2-1 pips already fired; no GO horn on set transition
     ledSetNum(emomCurrentSet);
     ledTimeNum(0);           // 00:00 display ✓
     ledGoFlash();            // Neon Cyan flash at each new 00:00
@@ -3282,7 +3268,7 @@ function resetTimer() {
     ledTimeNum(0);   // show 00:00 — was ledTimeNum(remaining) = "01:00"
     ledGoFlash();
     updateSetCounter(true); refreshProgressBar(); buildDots();
-    setStartBeep();
+    // Silent start: no GO horn on reset per spec
   }
   // Drift-corrected restart
   let _tickOrigin = performance.now(); let _tickCount = 0;
@@ -3553,9 +3539,9 @@ function gcCtrlFinish(e) {
   }
 }
 
-// Mobile touch-active class for gc-buttons (tactile feedback)
+// Mobile touch-active class for gc-buttons and nav-buttons (tactile feedback)
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.gc-btn').forEach(btn => {
+  document.querySelectorAll('.gc-btn, .nav-btn').forEach(btn => {
     btn.addEventListener('touchstart', () => btn.classList.add('touched'),   { passive: true });
     btn.addEventListener('touchend',   () => btn.classList.remove('touched'), { passive: true });
     btn.addEventListener('touchcancel',() => btn.classList.remove('touched'), { passive: true });
@@ -3571,9 +3557,11 @@ function showReport() {
   gcCancelLongPress();
   tryUnlockOrientation();
 
-  // BUG FIX: hide the stealth control bar so it doesn't float over the poster
-  const gcCtrl = document.getElementById('gc-controls');
-  if (gcCtrl) gcCtrl.classList.remove('visible');
+  // BUG FIX: hide the stealth control bar and left-nav so they don't float over the poster
+  const gcCtrl  = document.getElementById('gc-controls');
+  const leftNav = document.getElementById('left-nav');
+  if (gcCtrl)  gcCtrl.classList.remove('visible');
+  if (leftNav) leftNav.classList.remove('visible');
   // Hide mega buttons — report-modal (z:10000) sits above them anyway, but
   // hiding is cleaner and ensures body.mega-active is removed (restores clock padding).
   syncMegaBtns();
@@ -3638,26 +3626,32 @@ function showReport() {
 
 function hideReport() {
   document.getElementById('report-modal').classList.add('hidden');
-  // Restore stealth controls if still on running screen
+  // Restore stealth controls and left-nav if still on running screen
   const running = document.getElementById('running');
   if (running && !running.classList.contains('hidden')) {
-    const gcCtrl = document.getElementById('gc-controls');
-    if (gcCtrl) gcCtrl.classList.add('visible');
+    const gcCtrl  = document.getElementById('gc-controls');
+    const leftNav = document.getElementById('left-nav');
+    if (gcCtrl)  gcCtrl.classList.add('visible');
+    if (leftNav) leftNav.classList.add('visible');
   }
 }
 
 function reportHome() {
   document.getElementById('report-modal').classList.add('hidden');
-  const gcCtrl = document.getElementById('gc-controls');
-  if (gcCtrl) gcCtrl.classList.remove('visible');
+  const gcCtrl  = document.getElementById('gc-controls');
+  const leftNav = document.getElementById('left-nav');
+  if (gcCtrl)  gcCtrl.classList.remove('visible');
+  if (leftNav) leftNav.classList.remove('visible');
   clearSplits();
   goHome();
 }
 
 function reportRestart() {
   document.getElementById('report-modal').classList.add('hidden');
-  const gcCtrl = document.getElementById('gc-controls');
-  if (gcCtrl) gcCtrl.classList.remove('visible');
+  const gcCtrl  = document.getElementById('gc-controls');
+  const leftNav = document.getElementById('left-nav');
+  if (gcCtrl)  gcCtrl.classList.remove('visible');
+  if (leftNav) leftNav.classList.remove('visible');
   clearSplits();           // BUG FIX: wipe previous splits before new session
   startCountdown();
 }
@@ -3807,7 +3801,7 @@ function gcHandleTap(e) {
     gcFlashT = setTimeout(() => gf.classList.remove('pop'), 130);
   }
 
-  if (mode === 'fortime' || mode === 'amrap') {
+  if (mode === 'fortime') {
     const ts        = elapsed;
     const roundTime = ts - lastSplitTimestamp;
     lastSplitTimestamp = ts;
