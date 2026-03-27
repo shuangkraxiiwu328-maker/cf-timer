@@ -1,7 +1,96 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+
+  <!--
+    CF TIMER — "Digital Monolith" App Icon
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Palette : #050505 bg · #FFFF00 digits · #252525 brand tag
+    Digits  : 7-segment rounded-pill construction
+              Each segment is a rect with rx=10, giving smooth
+              rounded ends — no sharp corners anywhere.
+    Layout  : "10:00" centred at (256,228) on a 512×512 canvas.
+              Each digit cell = 80 × 160 px  |  bar = 20 px  |  r = 10
+              Element spacing = 12 px
+              Positions (x) : 1→62  0→154  :→246  0→278  0→370
+              Positions (y) : all digits at y = 148
+  -->
+
+  <!-- ── Background ───────────────────────────────────────── -->
   <rect width="512" height="512" fill="#050505"/>
-  <text x="256" y="340" font-size="280" text-anchor="middle"
-        fill="#00E5FF" font-family="'Arial Black',monospace" font-weight="900"
-        letter-spacing="-12">CF</text>
-  <rect x="200" y="360" width="112" height="8" rx="4" fill="#FFFF00" opacity="0.7"/>
+
+  <!-- ══════════════════════════════════════════════════════
+       DIGIT "1"  at x=62, y=148
+       A single bold centred vertical bar — clean, minimal.
+       ══════════════════════════════════════════════════════ -->
+  <g transform="translate(62,148)" fill="#FFFF00">
+    <!-- Centred stroke — one smooth pill -->
+    <rect x="30" y="7"  width="20" height="146" rx="10"/>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════
+       DIGIT "0"  at x=154, y=148
+       All 6 outer segments active (no middle bar).
+       ══════════════════════════════════════════════════════ -->
+  <g transform="translate(154,148)" fill="#FFFF00">
+    <!-- Top -->
+    <rect x="14" y="0"   width="52" height="20" rx="10"/>
+    <!-- Top-Left -->
+    <rect x="0"  y="14"  width="20" height="52" rx="10"/>
+    <!-- Top-Right -->
+    <rect x="60" y="14"  width="20" height="52" rx="10"/>
+    <!-- Bottom-Left -->
+    <rect x="0"  y="94"  width="20" height="52" rx="10"/>
+    <!-- Bottom-Right -->
+    <rect x="60" y="94"  width="20" height="52" rx="10"/>
+    <!-- Bottom -->
+    <rect x="14" y="140" width="52" height="20" rx="10"/>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════
+       COLON  at x=246, y=148  (centred on x=256)
+       Two circular dots aligned with the segment halves.
+       ══════════════════════════════════════════════════════ -->
+  <g transform="translate(246,148)" fill="#FFFF00">
+    <!-- Upper dot — centre of top-half segment -->
+    <circle cx="10" cy="48"  r="10"/>
+    <!-- Lower dot — centre of bottom-half segment -->
+    <circle cx="10" cy="112" r="10"/>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════
+       DIGIT "0"  at x=278, y=148
+       ══════════════════════════════════════════════════════ -->
+  <g transform="translate(278,148)" fill="#FFFF00">
+    <rect x="14" y="0"   width="52" height="20" rx="10"/>
+    <rect x="0"  y="14"  width="20" height="52" rx="10"/>
+    <rect x="60" y="14"  width="20" height="52" rx="10"/>
+    <rect x="0"  y="94"  width="20" height="52" rx="10"/>
+    <rect x="60" y="94"  width="20" height="52" rx="10"/>
+    <rect x="14" y="140" width="52" height="20" rx="10"/>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════
+       DIGIT "0"  at x=370, y=148
+       ══════════════════════════════════════════════════════ -->
+  <g transform="translate(370,148)" fill="#FFFF00">
+    <rect x="14" y="0"   width="52" height="20" rx="10"/>
+    <rect x="0"  y="14"  width="20" height="52" rx="10"/>
+    <rect x="60" y="14"  width="20" height="52" rx="10"/>
+    <rect x="0"  y="94"  width="20" height="52" rx="10"/>
+    <rect x="60" y="94"  width="20" height="52" rx="10"/>
+    <rect x="14" y="140" width="52" height="20" rx="10"/>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════
+       BRAND TAG  "CF.T"
+       Ultra-muted — barely visible on black, premium feel.
+       ══════════════════════════════════════════════════════ -->
+  <text
+    x="256" y="352"
+    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-weight="700"
+    font-size="22"
+    letter-spacing="9"
+    fill="#2a2a2a"
+    text-anchor="middle">CF.T</text>
+
 </svg>

@@ -7,6 +7,16 @@
 
 <!-- PWA: enables "Add to Home Screen" → true standalone fullscreen on mobile -->
 <link rel="manifest" href="manifest.json" />
+
+<!-- ── Icons ─────────────────────────────────────────────────────────────
+     SVG favicon — modern Chrome / Firefox / Safari 15+
+     The SVG uses path-drawn 7-segment numerals so the icon looks identical
+     on every platform regardless of installed fonts.                       -->
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<!-- Apple Touch Icon — shown on iOS home screen & Safari tab preview.
+     iOS 12+ renders SVG; older iOS falls back to a screenshot crop.        -->
+<link rel="apple-touch-icon" href="icon.svg" />
+
 <!-- iOS Safari standalone mode (required in addition to manifest) -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
