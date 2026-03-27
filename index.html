@@ -1828,18 +1828,16 @@ body::after {
 }
 .mega-btn.visible { display: flex; }
 
-/* For Time — Floating White on Pure Black */
+/* For Time — "Floating White" on Pure Black */
 #mega-finish-btn {
-  background: #000000;
-  color: #ffffff;
-  letter-spacing: .10em;
-  text-shadow: 0 0 28px rgba(255,255,255,.95), 0 0 60px rgba(255,255,255,.30);
-  border-top: 1px solid rgba(255,255,255,.08);
-  animation: mega-finish-float 2.2s ease-in-out infinite;
+  background: #000000;          /* pure black — matches page bg, button "disappears" */
+  color: #ffffff;               /* massive bold pure white text */
+  letter-spacing: .08em;
+  text-shadow: 0 0 10px rgba(255,255,255,0.5);   /* subtle floating glow */
+  border-top: 1px solid rgba(255,255,255,.06);   /* hairline separator, almost invisible */
 }
 #mega-finish-btn:active {
-  background: #0a0a0a;
-  animation: none;
+  background: #111111;
   transform: scale(0.99);
 }
 
@@ -2840,7 +2838,7 @@ function setStartBeep() {
 //
 // Also ducks background music during the horn for gym clarity.
 function longBeep() {
-  console.info('[CF-AUDIO] 🏁 longBeep fired — 3 s WOD COMPLETE horn');
+  console.info('[CF-AUDIO] 🏁 longBeep fired — 1.0 s WOD COMPLETE finish beep');
   if (!audioCtx) {
     console.warn('[CF-AUDIO] ⚠ longBeep: audioCtx is null');
     return;
@@ -2856,22 +2854,21 @@ function longBeep() {
     duckAudio(0.10, 0.03);
 
     const now  = audioCtx.currentTime;
-    const dur  = 1.0;   // 1-second WOD-COMPLETE finish signal
-    const freq = 1000;  // 1 kHz square wave
+    const freq = 1000;  // 1 kHz square wave — maximum gym penetration
 
     const g = audioCtx.createGain();
     g.connect(compressor);
     g.gain.setValueAtTime(0,        now);
     g.gain.linearRampToValueAtTime(BEEP_VOL, now + 0.012);      // 12 ms attack
-    g.gain.setValueAtTime(BEEP_VOL, now + dur - 0.10);          // hold flat
-    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);     // 100 ms release
+    g.gain.setValueAtTime(BEEP_VOL, now + 0.90);                // hold flat until 900 ms
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);     // 100 ms release → exact 1.0 s
 
     const osc = audioCtx.createOscillator();
     osc.type = 'square';
     osc.frequency.setValueAtTime(freq, now);
     osc.connect(g);
     osc.start(now);
-    osc.stop(now + dur + 0.015);
+    osc.stop(audioCtx.currentTime + 1.0);   // cuts off precisely at 1.0 s
     osc.onended = () => {
       try { osc.disconnect(); g.disconnect(); } catch(_) {}
       // Restore background music after beep finishes
@@ -2945,7 +2942,7 @@ function startCountdown() {
     cdVal--;
     if (cdVal <= 0) {
       clearInterval(cdInterval);
-      warnBeep(1);   // short sharp pip identical to the 3-2-1 sequence — no long horn at GO
+      tone(1319, 0.10, 1.0, 0, 'go-pip');   // 100ms sharp pip — identical pitch to "1" in 3-2-1
       el.textContent = 'GO!';
       el.style.color = 'var(--green)';
       el.style.textShadow = '0 0 55px rgba(57,255,20,.7)';
