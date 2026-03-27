@@ -962,10 +962,11 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
 }
 #emom-board::after {
   content:''; position:absolute; inset:0;
-  background: rgba(0,255,0,0); pointer-events:none;
+  background: rgba(0,229,255,0); pointer-events:none;
   transition: background .05s; z-index:10;
 }
-#emom-board.go-flash::after { background: rgba(0,255,0,.18); }
+/* Neon Cyan flash at 00:00 of every new set (count-up mode) */
+#emom-board.go-flash::after { background: rgba(0,229,255,.22); }
 
 #emom-board.paused #emom-set-num,
 #emom-board.paused #emom-time-num {
@@ -1073,6 +1074,38 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
   transition: color .3s;
 }
 #giant-clock.frozen #giant-frozen-label { color: rgba(255,255,255,.25); }
+
+/* ── WOD COMPLETE state — neon yellow freeze at time cap ─────────
+   Triggered automatically when timer reaches targetSecs.
+   Overrides the default red frozen style so the athlete sees
+   the unmistakable "WOD DONE" yellow signal.                       */
+#giant-clock.wod-complete #giant-time {
+  color: #FFFF00 !important;
+  text-shadow:
+    0 0 20px rgba(255,255,0,.95),
+    0 0 60px  rgba(255,255,0,.55),
+    0 0 120px rgba(255,255,0,.22) !important;
+  animation: wod-pulse 1.8s ease-in-out infinite !important;
+  opacity: 1 !important;
+}
+@keyframes wod-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 20px rgba(255,255,0,.95),
+      0 0 60px  rgba(255,255,0,.55);
+  }
+  50% {
+    text-shadow:
+      0 0 40px #FFFF00,
+      0 0 100px rgba(255,255,0,.75),
+      0 0 180px rgba(255,255,0,.30);
+  }
+}
+/* WOD COMPLETE frozen label — yellow tint */
+#giant-clock.wod-complete #giant-frozen-label {
+  color: rgba(255,255,0,.55) !important;
+  letter-spacing: .5em;
+}
 
 /* ── Long-press SVG ring ─────────────────────────────────────────
    A conic-gradient circle that GROWS around the clock-wrap.
@@ -2114,7 +2147,7 @@ function goHome() {
   run.classList.remove('emom-mode', 'giant-mode', 'giant-paused');
   document.getElementById('emom-board').classList.remove('paused', 'warning', 'go-flash');
   const gc = document.getElementById('giant-clock');
-  gc.classList.remove('warn', 'blink', 'frozen');
+  gc.classList.remove('warn', 'blink', 'frozen', 'wod-complete');
   show('home');
 }
 
@@ -2617,12 +2650,13 @@ function warnBeep(n) {
   tone(f, 0.15, 1.0, 0, `warn-${n}`);
 }
 
-// ── Final-second long beep (For Time / AMRAP end warning) ─────────
-// Same pitch as warn "1" (E6 1319Hz) but held 4× longer so it reads
-// as a distinct "last call" rather than a regular countdown tick.
+// ── Final-second pip (09:59 — last in the 3-pip countdown sequence) ──
+// Same pitch as warn "1" (E6 1319Hz). Duration 0.18 s keeps it a
+// clean "short pip" matching warnBeep cadence (user story §3).
+// The 3-second long horn fires on the NEXT tick (10:00).
 function finalBeep() {
-  console.info('[CF-AUDIO] ⏱ finalBeep fired — last second');
-  tone(1319, 0.60, 1.0, 0, 'final');   // E6 — held, distinct from 0.15s ticks
+  console.info('[CF-AUDIO] ⏱ finalBeep fired — last-second pip (09:59)');
+  tone(1319, 0.18, 1.0, 0, 'final');   // E6 — short pip, 0.18 s
 }
 
 // ── GO / Set-start horn ────────────────────────────────────────────
@@ -2636,14 +2670,92 @@ function setStartBeep() {
   tone(1319, 0.50, 1.0, 160,  'go-3');  // E6 — held, rings out
 }
 
-// ── Session-end long horn ──────────────────────────────────────────
-// Starts low, rises — classic air-horn envelope.
-// 500ms total gives it presence without over-staying.
+// ── Session-end 3-second sustained horn (WOD COMPLETE) ────────────
+// 1000 Hz square wave — chosen for maximum penetration through
+// gym noise. ADSR: 12 ms attack → 2.7 s flat sustain → 0.3 s
+// exponential release.  Bypasses _playTone() so the full-decay
+// envelope used by short beeps doesn't shorten the sustain.
+//
+// BUG FIX (mobile silent finish):
+// The old code called audioCtx.resume() (async Promise) then
+// immediately checked audioCtx.state synchronously — state was
+// still 'suspended', so the function returned early with NO sound.
+// Fix: extract audio scheduling into _play() and call it inside
+// resume().then(_play) so we only schedule after the context is
+// truly running. Mirrors the pattern used in tone().
+//
+// Also ducks background music during the horn for gym clarity.
 function longBeep() {
-  console.info('[CF-AUDIO] 🏁 longBeep fired');
-  tone(880,  0.08, 0.7,   0, 'end-1');  // A5  — punch
-  tone(1046, 0.10, 0.85,  60, 'end-2'); // C6  — rise
-  tone(1319, 0.55, 1.0,  140, 'end-3'); // E6  — sustain
+  console.info('[CF-AUDIO] 🏁 longBeep fired — 3 s WOD COMPLETE horn');
+  if (!audioCtx) {
+    console.warn('[CF-AUDIO] ⚠ longBeep: audioCtx is null');
+    return;
+  }
+
+  const _play = () => {
+    if (audioCtx.state !== 'running') {
+      console.warn(`[CF-AUDIO] ⚠ longBeep: context "${audioCtx.state}" after resume — horn silent`);
+      return;
+    }
+
+    // Duck background music so the horn cuts through
+    duckAudio(0.10, 0.03);
+
+    const now  = audioCtx.currentTime;
+    const dur  = 3.0;   // seconds — the full 3-second WOD-COMPLETE blast
+    const freq = 1000;  // 1 kHz square wave
+
+    const g = audioCtx.createGain();
+    g.connect(compressor);
+    g.gain.setValueAtTime(0,        now);
+    g.gain.linearRampToValueAtTime(BEEP_VOL, now + 0.012);      // 12 ms attack
+    g.gain.setValueAtTime(BEEP_VOL, now + dur - 0.30);          // hold flat
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);     // 300 ms release
+
+    const osc = audioCtx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.connect(g);
+    osc.start(now);
+    osc.stop(now + dur + 0.02);
+    osc.onended = () => {
+      try { osc.disconnect(); g.disconnect(); } catch(_) {}
+      // Restore background music after horn finishes
+      duckAudio(MASTER_VOL, 0.50);
+    };
+  };
+
+  // KEY FIX: if suspended, wait for resume() Promise to resolve before
+  // scheduling — the old synchronous state check caused silent finishes.
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(_play).catch(err => {
+      console.warn('[CF-AUDIO] ⚠ longBeep: resume() rejected —', err);
+    });
+  } else {
+    _play();
+  }
+}
+
+// ── WOD COMPLETE: freeze giant clock at time cap ───────────────────
+// Called by tick() when elapsed reaches targetSecs (For Time / AMRAP).
+// Freezes the display with neon-yellow glow and waits for the athlete
+// to manually tap "Finish" — never auto-navigates to the report.
+function triggerWodComplete() {
+  gcFrozen = true;
+  releaseWakeLock();
+  clearFlash();
+  tryUnlockOrientation();
+
+  const gc   = document.getElementById('giant-clock');
+  const hint = document.getElementById('giant-hint');
+  const lbl  = document.getElementById('giant-frozen-label');
+
+  if (gc) {
+    gc.classList.remove('warn', 'blink');
+    gc.classList.add('frozen', 'wod-complete');
+  }
+  if (hint) hint.textContent = 'WOD COMPLETE  ·  TAP FINISH TO SAVE';
+  if (lbl)  lbl.textContent  = 'WOD COMPLETE';
 }
 
 // ══════════════════════════════════════════════
@@ -2746,9 +2858,10 @@ function startTimer() {
     dotsEl.classList.add('hidden');
 
   } else {
-    // EMOM — activate LED hardware board
+    // EMOM — activate LED hardware board (COUNT UP from 00:00)
     emomCurrentSet = 1;
-    remaining      = emomSetSecs;
+    remaining      = 0;   // COUNT-UP: 0 → emomSetSecs per set (was emomSetSecs)
+    elapsed        = 0;   // purge any For Time / AMRAP elapsed state
     document.getElementById('running').classList.add('emom-mode');
     modeTag.textContent = 'EMOM';
     setCtr.classList.remove('hidden');
@@ -2757,11 +2870,11 @@ function startTimer() {
     updateSetCounter(true);
     refreshProgressBar();
     buildDots();
-    // Sync LED board initial state
+    // Sync LED board: starts at 00:00
     ledSetNum(emomCurrentSet);
-    ledTimeNum(remaining);
+    ledTimeNum(0);
     ledClearWarning();
-    ledGoFlash();
+    ledGoFlash();       // Neon Cyan flash on set 1 start
     // Play start beep for set 1
     setStartBeep();
   }
@@ -2807,7 +2920,7 @@ function tick() {
       }
     }
     if (targetSecs > 0 && elapsed >= targetSecs) {
-      clearInterval(timerInterval); longBeep(); showFinish();
+      clearInterval(timerInterval); longBeep(); triggerWodComplete();
     }
     return;
   }
@@ -2828,42 +2941,53 @@ function tick() {
       triggerFlash();
       gc.classList.add('blink');
     }
-    if (remaining <= 0) { clearInterval(timerInterval); longBeep(); showFinish(); }
+    if (remaining <= 0) { clearInterval(timerInterval); longBeep(); triggerWodComplete(); }
     return;
   }
 
-  /* ── EMOM ── */
-  remaining--;
-  ledTimeNum(remaining);
-  refreshProgressBar();
+  /* ── EMOM (COUNT UP: 00:00 → emomSetSecs per set) ── */
+  // Increment elapsed time within the current set
+  remaining++;
 
-  // Last-3-sec warning of current set
-  if (remaining <= 3 && remaining > 0) {
-    warnBeep(remaining);
-    triggerFlash();
-    ledSetWarning();   // both numbers turn red + blink on LED board
-  }
-
-  // Set complete
-  if (remaining <= 0) {
+  // ── Set complete? (check BEFORE updating display to avoid 1-frame flash) ──
+  if (remaining >= emomSetSecs) {
     ledClearWarning();
+    clearFlash();
+
     if (emomCurrentSet >= emomSets) {
-      // All sets done
+      // ── All sets done — freeze display on final time ──
+      ledTimeNum(remaining);   // shows e.g. "01:00" as the frozen final frame
       clearInterval(timerInterval);
       longBeep();
       showFinish();
       return;
     }
-    // Advance set
+
+    // ── Advance to next set ──
+    // Reset elapsed-in-set to 0 BEFORE any DOM update so the browser
+    // only ever paints "00:00" — no "01:00" stutter between sets.
     emomCurrentSet++;
-    remaining = emomSetSecs;
-    clearFlash();
+    remaining = 0;
     setStartBeep();
     ledSetNum(emomCurrentSet);
-    ledTimeNum(remaining);
-    ledGoFlash();      // green screen flash on new set
+    ledTimeNum(0);           // immediate 00:00 display ✓
+    ledGoFlash();            // Neon Cyan flash at each 00:00 mark
+    refreshProgressBar();
     updateSetCounter(false);
     updateDots();
+    return;                  // skip normal display/warning update this tick
+  }
+
+  // ── Normal tick: update display then check pre-set warning ──
+  ledTimeNum(remaining);
+  refreshProgressBar();
+
+  // Last-3-sec warning before set end (e.g. fires at 00:57, 00:58, 00:59)
+  const timeLeft = emomSetSecs - remaining;
+  if (timeLeft > 0 && timeLeft <= 3) {
+    if (timeLeft === 1) finalBeep(); else warnBeep(timeLeft);
+    triggerFlash();
+    ledSetWarning();   // both numbers turn red + blink on LED board
   }
 }
 
@@ -2879,8 +3003,9 @@ function updateSetCounter(immediate) {
 
 function refreshProgressBar() {
   if (mode !== 'emom') return;
-  // fraction of total work done
-  const done = (emomCurrentSet - 1) * emomSetSecs + (emomSetSecs - remaining);
+  // COUNT-UP: `remaining` is elapsed seconds within current set (0 → emomSetSecs)
+  // was: (emomSetSecs - remaining) — that formula was for count-DOWN
+  const done = (emomCurrentSet - 1) * emomSetSecs + remaining;
   const pct  = emomTotalSecs > 0 ? (done / emomTotalSecs) * 100 : 0;
   document.getElementById('set-progress-bar').style.width = Math.min(100, pct) + '%';
 }
@@ -2983,7 +3108,7 @@ function resetTimer() {
   document.getElementById('running').classList.remove('giant-paused');
   // Clear all visual states on giant-clock
   const gc = document.getElementById('giant-clock');
-  if (gc) gc.classList.remove('warn', 'blink', 'frozen');
+  if (gc) gc.classList.remove('warn', 'blink', 'frozen', 'wod-complete');
 
   if (mode === 'fortime') {
     document.getElementById('timer-display').className   = 'timer-display red';
@@ -3267,6 +3392,10 @@ function gcCtrlFinish(e) {
   if (mode === 'emom') {
     clearInterval(timerInterval); timerInterval = null;
     longBeep(); showFinish();
+  } else if (gcFrozen) {
+    // Timer already hit the time cap and froze via triggerWodComplete() —
+    // jump straight to the report poster without firing longBeep() again.
+    showReport();
   } else {
     gcFireFinish();
   }
@@ -3550,7 +3679,7 @@ function gcRenderChips() {
 function gcResetFrozen() {
   gcFrozen = false;
   const gc = document.getElementById('giant-clock');
-  if (gc) gc.classList.remove('frozen');
+  if (gc) gc.classList.remove('frozen', 'wod-complete');
   const hint = document.getElementById('giant-hint');
   if (hint) hint.textContent = 'TAP · SPLIT     HOLD 1.5S · FINISH';
 }
