@@ -676,8 +676,10 @@ html, body {
 .timer-display {
   font-family: 'Inter', sans-serif;
   font-weight: 900;
-  font-size: clamp(78px, 21vw, 195px);
-  letter-spacing: -.04em;
+  /* +15% from 90/24vw/224 → 104/27.5vw/258 — "Solid & Powerful" micro-bump */
+  font-size: clamp(104px, 27.5vw, 258px);
+  /* -0.05em: genuinely tighter than -0.04em — compressed industrial feel */
+  letter-spacing: -.05em;
   line-height: .95;
   position: relative; z-index: 2;
   transition: color .4s, text-shadow .4s;
@@ -907,7 +909,7 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
   background: #000;
   flex-direction: row; align-items: stretch;
   /* GIGA-DISPLAY: larger LED digits for high-stress readability */
-  --led-size: clamp(68px, 19vh, 186px);
+  --led-size: clamp(78px, 22vh, 214px);
 }
 #running.emom-mode #emom-board { display: flex; }
 
@@ -999,7 +1001,7 @@ body:has(#running:not(.hidden)) #gc-controls { display: flex; }
   /* GIGA-DISPLAY: 30vw fills ~90% of narrow screens (incl. iPhone SE 320px).
      Body overflow:hidden prevents horizontal scroll even if digits clip edges.
      Clamped at 300px so desktop/iPad doesn't produce comically huge digits.   */
-  --giant-size: clamp(80px, 30vw, 300px);
+  --giant-size: clamp(92px, 34.5vw, 345px);
   transition: padding-bottom .25s ease;
 }
 /* Push digit cluster up when the mega action button occupies the bottom 30% */
@@ -1035,7 +1037,7 @@ body.mega-active #giant-clock {
 #giant-time {
   font-family: 'DSEG7 Classic','DSEG7Classic','Share Tech Mono',monospace;
   font-size: var(--giant-size);
-  line-height: 1; letter-spacing: .02em; text-align: center;
+  line-height: 1; letter-spacing: -0.02em; text-align: center;
   width: 100%; position: relative; z-index: 1;
   transition: color .2s, text-shadow .2s, opacity .15s;
 }
@@ -1679,7 +1681,7 @@ body::after {
 
   /* RUNNING */
   #running { justify-content: center; }
-  .timer-display { font-size: clamp(100px, 40vh, 340px); line-height: .92; z-index: 2; }
+  .timer-display { font-size: clamp(132px, 53vh, 450px); line-height: .92; z-index: 2; }
   .run-mode-tag      { display: none; }
   .set-progress-wrap { display: none; }
   .set-dots          { display: none; }
@@ -1722,7 +1724,7 @@ body::after {
 
   /* EMOM LED landscape */
   #emom-board {
-    --led-size: clamp(72px, min(48vh, 18vw), 200px);
+    --led-size: clamp(83px, min(55vh, 21vw), 230px);
     padding-bottom: 72px;
   }
   #emom-set-panel  { padding: 0; }
@@ -1730,7 +1732,7 @@ body::after {
 
   /* Giant clock landscape — height-limited since screen is shorter */
   #giant-clock {
-    --giant-size: clamp(80px, min(72vh, 28vw), 360px);
+    --giant-size: clamp(92px, min(83vh, 32vw), 414px);
     padding-bottom: 72px;
   }
 
@@ -1791,6 +1793,10 @@ body::after {
   0%, 100% { opacity: 1;    box-shadow: 0 -4px 40px rgba(255,255,0,.25); }
   50%       { opacity: 0.88; box-shadow: 0 -4px 80px rgba(255,255,0,.55); }
 }
+@keyframes mega-finish-float {
+  0%, 100% { text-shadow: 0 0 28px rgba(255,255,255,.95), 0 0 60px rgba(255,255,255,.30); }
+  50%       { text-shadow: 0 0 48px #ffffff,               0 0 100px rgba(255,255,255,.55); }
+}
 @keyframes mega-pulse-cyan {
   0%, 100% { opacity: 1;    box-shadow: 0 -4px 40px rgba(0,229,255,.22); }
   50%       { opacity: 0.88; box-shadow: 0 -4px 80px rgba(0,229,255,.50); }
@@ -1822,14 +1828,17 @@ body::after {
 }
 .mega-btn.visible { display: flex; }
 
-/* For Time — Neon Yellow */
+/* For Time — Floating White on Pure Black */
 #mega-finish-btn {
-  background: #FFFF00;
-  color: #000;
-  animation: mega-pulse 2.2s ease-in-out infinite;
+  background: #000000;
+  color: #ffffff;
+  letter-spacing: .10em;
+  text-shadow: 0 0 28px rgba(255,255,255,.95), 0 0 60px rgba(255,255,255,.30);
+  border-top: 1px solid rgba(255,255,255,.08);
+  animation: mega-finish-float 2.2s ease-in-out infinite;
 }
 #mega-finish-btn:active {
-  background: #e6e600;
+  background: #0a0a0a;
   animation: none;
   transform: scale(0.99);
 }
@@ -2847,26 +2856,26 @@ function longBeep() {
     duckAudio(0.10, 0.03);
 
     const now  = audioCtx.currentTime;
-    const dur  = 3.0;   // seconds — the full 3-second WOD-COMPLETE blast
+    const dur  = 1.0;   // 1-second WOD-COMPLETE finish signal
     const freq = 1000;  // 1 kHz square wave
 
     const g = audioCtx.createGain();
     g.connect(compressor);
     g.gain.setValueAtTime(0,        now);
     g.gain.linearRampToValueAtTime(BEEP_VOL, now + 0.012);      // 12 ms attack
-    g.gain.setValueAtTime(BEEP_VOL, now + dur - 0.30);          // hold flat
-    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);     // 300 ms release
+    g.gain.setValueAtTime(BEEP_VOL, now + dur - 0.10);          // hold flat
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);     // 100 ms release
 
     const osc = audioCtx.createOscillator();
     osc.type = 'square';
     osc.frequency.setValueAtTime(freq, now);
     osc.connect(g);
     osc.start(now);
-    osc.stop(now + dur + 0.02);
+    osc.stop(now + dur + 0.015);
     osc.onended = () => {
       try { osc.disconnect(); g.disconnect(); } catch(_) {}
-      // Restore background music after horn finishes
-      duckAudio(MASTER_VOL, 0.50);
+      // Restore background music after beep finishes
+      duckAudio(MASTER_VOL, 0.30);
     };
   };
 
@@ -2936,7 +2945,7 @@ function startCountdown() {
     cdVal--;
     if (cdVal <= 0) {
       clearInterval(cdInterval);
-      longBeep();
+      warnBeep(1);   // short sharp pip identical to the 3-2-1 sequence — no long horn at GO
       el.textContent = 'GO!';
       el.style.color = 'var(--green)';
       el.style.textShadow = '0 0 55px rgba(57,255,20,.7)';
@@ -3092,8 +3101,8 @@ function tick() {
 
   /* ── EMOM (COUNT UP: 00:00 → emomSetSecs per set) ── */
   // elapsedInSet is the dedicated EMOM counter — never touches `remaining`
+  // NOTE: elapsed++ already fired at line 3052 above (all modes) — do NOT repeat it here
   elapsedInSet++;
-  elapsed++;   // global elapsed still tracks total session time for the finish screen
 
   // ── Set complete? (check BEFORE updating display to avoid 1-frame flash) ──
   if (elapsedInSet >= emomSetSecs) {
