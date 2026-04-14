@@ -1884,25 +1884,25 @@ body::after {
   <div class="logo">CF<span class="logo-dot">.</span>TIMER</div>
   <span class="logo-sub">CROSSFIT &nbsp;·&nbsp; HYROX &nbsp;·&nbsp; FUNCTIONAL TRAINING</span>
 
-  <!-- FOR TIME capsule -->
+  <!-- COUNT UP capsule -->
   <button class="mode-card ft" onclick="selectMode('fortime')">
     <div class="card-inner">
       <div class="card-left">
-        <span class="card-title">For Time</span>
-        <span class="card-desc">Beat the clock &nbsp;·&nbsp; Record every split</span>
+        <span class="card-title">Count Up</span>
+        <span class="card-desc">Timer counts up &nbsp;·&nbsp; Record splits</span>
       </div>
       <span class="card-tag">Count<br>Up</span>
     </div>
   </button>
 
-  <!-- AMRAP capsule -->
+  <!-- COUNT DOWN capsule -->
   <button class="mode-card am" onclick="selectMode('amrap')">
     <div class="card-inner">
       <div class="card-left">
-        <span class="card-title">AMRAP</span>
-        <span class="card-desc">As many rounds as possible</span>
+        <span class="card-title">Count Down</span>
+        <span class="card-desc">Countdown to zero &nbsp;·&nbsp; Set your time</span>
       </div>
-      <span class="card-tag">Count<br>Up</span>
+      <span class="card-tag">Count<br>Down</span>
     </div>
   </button>
 
@@ -1930,10 +1930,10 @@ body::after {
   <input type="tel" id="emom-sets-ghost" class="ghost-input" inputmode="numeric" pattern="\d*" autocomplete="off" />
 
   <button class="back-btn" onclick="goHome()">←</button>
-  <div class="s-header green" id="s-title">FOR TIME</div>
-  <div class="s-sub" id="s-sub">SET TARGET TIME</div>
+  <div class="s-header green" id="s-title">COUNT UP</div>
+  <div class="s-sub" id="s-sub">SET TIME CAP (OPTIONAL)</div>
 
-  <!-- FOR TIME / AMRAP block -->
+  <!-- COUNT UP / COUNT DOWN block -->
   <div id="std-time-block">
     <div class="field-label" id="std-time-label">TARGET TIME</div>
     <div class="spinner-box">
@@ -2086,7 +2086,7 @@ body::after {
     <div id="set-progress-bar" style="width:0%"></div>
   </div>
 
-  <div class="run-mode-tag" id="run-mode-tag">FOR TIME</div>
+  <div class="run-mode-tag" id="run-mode-tag">COUNT UP</div>
   <div class="timer-display red" id="timer-display">00:00</div>
   <div id="split-popup"></div>
   <div class="set-dots hidden" id="set-dots"></div>
@@ -2250,7 +2250,7 @@ function syncMegaBtns() {
   const reportHidden  = document.getElementById('report-modal').classList.contains('hidden');
   const finishHidden  = document.getElementById('finish').classList.contains('hidden');
   const runningActive = !document.getElementById('running').classList.contains('hidden');
-  // FINISH only for For Time — AMRAP auto-completes at time cap, no manual finish needed
+  // FINISH only for Count Up — Count Down auto-completes at zero, no manual finish needed
   const showFB = runningActive && reportHidden && finishHidden && mode === 'fortime';
   if (fb) fb.classList.toggle('visible', showFB);
   // body.mega-active shifts giant-clock upward so digits don't overlap the button
@@ -2258,7 +2258,7 @@ function syncMegaBtns() {
   // Hide the small ghost FINISH button in gc-controls when mega-finish is visible
   const gcFin = document.getElementById('gc-finish-btn');
   if (gcFin) gcFin.style.display = showFB ? 'none' : '';
-  // AMRAP: hide gc-controls entirely (only had the Finish button, which is now removed)
+  // Count Down: hide gc-controls entirely (only had the Finish button, which is now removed)
   const gcCtrl = document.getElementById('gc-controls');
   if (gcCtrl && mode === 'amrap' && runningActive) gcCtrl.classList.remove('visible');
 }
@@ -2298,18 +2298,18 @@ function selectMode(m) {
   const accentL = document.getElementById('emom-accent-line');
 
   if (m === 'fortime') {
-    title.textContent = 'FOR TIME'; title.className = 's-header green';
-    sub.textContent   = 'SET TARGET TIME (OPTIONAL)';
-    stdLbl.textContent = 'TARGET TIME';
+    title.textContent = 'COUNT UP'; title.className = 's-header green';
+    sub.textContent   = 'SET TIME CAP (OPTIONAL)';
+    stdLbl.textContent = 'TIME CAP';
     startB.className  = 'start-btn green';
     spinMin = 20; spinSec = 0;
     stdB.style.display = ''; stdB.classList.remove('hidden');
     emomB.style.display = 'none';
     if (accentL) accentL.classList.remove('visible');
   } else if (m === 'amrap') {
-    title.textContent = 'AMRAP'; title.className = 's-header yellow';
-    sub.textContent   = 'SET TOTAL TIME';
-    stdLbl.textContent = 'TOTAL TIME';
+    title.textContent = 'COUNT DOWN'; title.className = 's-header yellow';
+    sub.textContent   = 'SET COUNTDOWN TIME';
+    stdLbl.textContent = 'COUNTDOWN TIME';
     startB.className  = 'start-btn yellow';
     spinMin = 15; spinSec = 0;
     stdB.style.display = ''; stdB.classList.remove('hidden');
@@ -2976,7 +2976,7 @@ function startTimer() {
     document.getElementById('giant-splits').innerHTML = '';
     display.className   = 'timer-display red';
     display.textContent = '00:00';
-    modeTag.textContent = 'FOR TIME';
+    modeTag.textContent = 'COUNT UP';
     setCtr.classList.add('hidden');
     setPWrap.classList.add('hidden');
     dotsEl.classList.add('hidden');
@@ -2986,11 +2986,11 @@ function startTimer() {
     document.getElementById('running').classList.add('giant-mode');
     document.getElementById('giant-clock').dataset.mode = 'amrap';
     document.getElementById('giant-clock').classList.remove('warn', 'blink');
-    document.getElementById('giant-time').textContent = formatTime(0);
+    document.getElementById('giant-time').textContent = formatTime(targetSecs);
     document.getElementById('giant-splits').innerHTML = '';
     display.className   = 'timer-display red';
-    display.textContent = formatTime(0);
-    modeTag.textContent = 'AMRAP';
+    display.textContent = formatTime(targetSecs);
+    modeTag.textContent = 'COUNT DOWN';
     setCtr.classList.add('hidden');
     setPWrap.classList.add('hidden');
     dotsEl.classList.add('hidden');
@@ -3043,7 +3043,7 @@ function tick() {
   if (paused) return;
   elapsed++;
 
-  /* ── FOR TIME ── */
+  /* ── COUNT UP ── */
   if (mode === 'fortime') {
     document.getElementById('timer-display').textContent = formatTime(elapsed);
     document.getElementById('giant-time').textContent    = formatTime(elapsed);
@@ -3062,13 +3062,13 @@ function tick() {
     return;
   }
 
-  /* ── AMRAP ── */
+  /* ── COUNT DOWN ── */
   if (mode === 'amrap') {
     const d  = document.getElementById('timer-display');
     const gc = document.getElementById('giant-clock');
-    d.textContent = formatTime(elapsed);
-    document.getElementById('giant-time').textContent = formatTime(elapsed);
     const remaining = targetSecs - elapsed;
+    d.textContent = formatTime(remaining);
+    document.getElementById('giant-time').textContent = formatTime(remaining);
     if (remaining <= 10 && remaining > 0) {
       d.className = 'timer-display red';
       gc.classList.add('warn');
@@ -3254,8 +3254,8 @@ function resetTimer() {
     document.getElementById('giant-splits').innerHTML = '';
   } else if (mode === 'amrap') {
     document.getElementById('timer-display').className   = 'timer-display red';
-    document.getElementById('timer-display').textContent = '00:00';
-    document.getElementById('giant-time').textContent    = '00:00';
+    document.getElementById('timer-display').textContent = formatTime(targetSecs);
+    document.getElementById('giant-time').textContent    = formatTime(targetSecs);
     document.getElementById('giant-clock').classList.remove('warn','blink');
     document.getElementById('giant-splits').innerHTML = '';
   } else {
@@ -3572,10 +3572,10 @@ function showReport() {
   // ── Header ──────────────────────────────────────────────────────
   document.getElementById('rpt-total').textContent = formatTime(totalTime);
   document.getElementById('rpt-eyebrow').textContent =
-    mode === 'fortime' ? 'TOTAL TIME' : mode === 'amrap' ? 'TIME CAP' : 'TOTAL TIME';
+    mode === 'fortime' ? 'TOTAL TIME' : mode === 'amrap' ? 'COUNTDOWN TIME' : 'TOTAL TIME';
   document.getElementById('rpt-sub-label').textContent =
-    mode === 'fortime' ? 'FOR TIME' :
-    mode === 'amrap'   ? 'AMRAP' :
+    mode === 'fortime' ? 'COUNT UP' :
+    mode === 'amrap'   ? 'COUNT DOWN' :
                          `EMOM · ${pad(emomEMin)}:${pad(emomESec)} / SET`;
 
   // Round count badge (top-right)
